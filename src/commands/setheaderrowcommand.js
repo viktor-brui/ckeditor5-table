@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,10 +7,10 @@
  * @module table/commands/setheaderrowcommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
 
-import { updateNumericAttribute } from '../utils/common';
-import { getVerticallyOverlappingCells, splitHorizontally } from '../utils/structure';
+import { findAncestor, updateNumericAttribute } from './utils';
+import { getVerticallyOverlappingCells, getRowIndexes, getSelectionAffectedTableCells, splitHorizontally } from '../utils';
 
 /**
  * The header row command.
@@ -31,9 +31,8 @@ export default class SetHeaderRowCommand extends Command {
 	 * @inheritDoc
 	 */
 	refresh() {
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
 		const model = this.editor.model;
-		const selectedCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
+		const selectedCells = getSelectionAffectedTableCells( model.document.selection );
 		const isInTable = selectedCells.length > 0;
 
 		this.isEnabled = isInTable;
@@ -65,14 +64,11 @@ export default class SetHeaderRowCommand extends Command {
 		if ( options.forceValue === this.value ) {
 			return;
 		}
-
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
 		const model = this.editor.model;
+		const selectedCells = getSelectionAffectedTableCells( model.document.selection );
+		const table = findAncestor( 'table', selectedCells[ 0 ] );
 
-		const selectedCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
-		const table = selectedCells[ 0 ].findAncestor( 'table' );
-
-		const { first, last } = tableUtils.getRowIndexes( selectedCells );
+		const { first, last } = getRowIndexes( selectedCells );
 		const headingRowsToSet = this.value ? first : last + 1;
 		const currentHeadingRows = table.getAttribute( 'headingRows' ) || 0;
 

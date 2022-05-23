@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -8,6 +8,7 @@ import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model
 
 import MergeCellsCommand from '../../src/commands/mergecellscommand';
 import { modelTable } from '../_utils/utils';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 import TableSelection from '../../src/tableselection';
 import TableEditing from '../../src/tableediting';
 import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
@@ -311,25 +312,6 @@ describe( 'MergeCellsCommand', () => {
 	describe( 'execute()', () => {
 		it( 'should merge simple table cell selection', () => {
 			setData( model, modelTable( [
-				[ '[]00', '01' ],
-				[ '10', '11' ]
-			] ) );
-
-			tableSelection.setCellSelection(
-				root.getNodeByPath( [ 0, 0, 0 ] ),
-				root.getNodeByPath( [ 0, 0, 1 ] )
-			);
-
-			command.execute();
-
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
-				[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ],
-				[ '10', '11' ]
-			] ) );
-		} );
-
-		it( 'should merge simple table cell selection and remove empty columns', () => {
-			setData( model, modelTable( [
 				[ '[]00', '01' ]
 			] ) );
 
@@ -340,8 +322,8 @@ describe( 'MergeCellsCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
-				[ '<paragraph>[00</paragraph><paragraph>01]</paragraph>' ]
+			assertEqualMarkup( getData( model ), modelTable( [
+				[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ]
 			] ) );
 		} );
 
@@ -359,7 +341,7 @@ describe( 'MergeCellsCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '00', '01', '02' ],
 				[ {
 					colspan: 3,
@@ -383,7 +365,7 @@ describe( 'MergeCellsCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '00', '01', '02' ],
 				[ {
 					colspan: 3,
@@ -408,7 +390,7 @@ describe( 'MergeCellsCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '00', '01', '02', '03' ],
 				[ '10', {
 					colspan: 2,
@@ -421,17 +403,9 @@ describe( 'MergeCellsCommand', () => {
 		} );
 
 		it( 'should merge table cells - extend colspan attribute', () => {
-			// +----+----+----+----+
-			// | 00      | 02 | 03 |
-			// +----+----+----+----+
-			// | 10 | 11 | 12 | 13 |
-			// +----+----+----+----+
-			// | 20 | 21 | 22 | 23 |
-			// +----+----+----+----+
 			setData( model, modelTable( [
 				[ { colspan: 2, contents: '00' }, '02', '03' ],
-				[ '10', '11', '12', '13' ],
-				[ '20', '21', '22', '23' ]
+				[ '10', '11', '12', '13' ]
 			] ) );
 
 			selectNodes( [
@@ -441,14 +415,7 @@ describe( 'MergeCellsCommand', () => {
 
 			command.execute();
 
-			// +----+----+----+----+
-			// |              | 03 |
-			// +   (merged)   +----+
-			// |              | 13 |
-			// +----+----+----+----+
-			// | 20 | 21 | 22 | 23 |
-			// +----+----+----+----+
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ {
 					colspan: 3,
 					rowspan: 2,
@@ -458,56 +425,49 @@ describe( 'MergeCellsCommand', () => {
 						'<paragraph>11</paragraph>' +
 						'<paragraph>12]</paragraph>'
 				}, '03' ],
-				[ '13' ],
-				[ '20', '21', '22', '23' ]
+				[ '13' ]
 			] ) );
 		} );
 
 		it( 'should merge to a single paragraph - every cell is empty', () => {
 			setData( model, modelTable( [
-				[ '[]', '' ],
-				[ '10', '11' ]
+				[ '[]', '' ]
 			] ) );
 
 			selectNodes( [ [ 0, 0, 0 ], [ 0, 0, 1 ] ] );
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
-				[ { colspan: 2, contents: '<paragraph>[]</paragraph>' } ],
-				[ '10', '11' ]
+			assertEqualMarkup( getData( model ), modelTable( [
+				[ { colspan: 2, contents: '<paragraph>[]</paragraph>' } ]
 			] ) );
 		} );
 
 		it( 'should merge to a single paragraph - merged cell is empty', () => {
 			setData( model, modelTable( [
-				[ 'foo', '' ],
-				[ '10', '11' ]
+				[ 'foo', '' ]
 			] ) );
 
 			selectNodes( [ [ 0, 0, 0 ], [ 0, 0, 1 ] ] );
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
-				[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ],
-				[ '10', '11' ]
+			assertEqualMarkup( getData( model ), modelTable( [
+				[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ]
 			] ) );
 		} );
 
 		it( 'should merge to a single paragraph - cell to which others are merged is empty', () => {
 			setData( model, modelTable( [
-				[ '', 'foo' ],
-				[ '10', '11' ]
+				[ '', 'foo' ]
 			] ) );
 
 			selectNodes( [ [ 0, 0, 0 ], [ 0, 0, 1 ] ] );
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
-				[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ],
-				[ '10', '11' ]
+			assertEqualMarkup( getData( model ), modelTable( [
+				[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ]
 			] ) );
 		} );
 
@@ -519,17 +479,15 @@ describe( 'MergeCellsCommand', () => {
 			} );
 
 			setData( model, modelTable( [
-				[ '<block>[]</block>', '<block></block>' ],
-				[ '10', '11' ]
+				[ '<block>[]</block>', '<block></block>' ]
 			] ) );
 
 			selectNodes( [ [ 0, 0, 0 ], [ 0, 0, 1 ] ] );
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
-				[ { colspan: 2, contents: '<block>[</block><block>]</block>' } ],
-				[ '10', '11' ]
+			assertEqualMarkup( getData( model ), modelTable( [
+				[ { colspan: 2, contents: '<block>[</block><block>]</block>' } ]
 			] ) );
 		} );
 
@@ -549,7 +507,7 @@ describe( 'MergeCellsCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[
 						'<paragraph>[00</paragraph><paragraph>10</paragraph><paragraph>20]</paragraph>'
 					]
@@ -570,7 +528,7 @@ describe( 'MergeCellsCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[
 						'<paragraph>[00</paragraph><paragraph>10]</paragraph>'
 					],
@@ -622,7 +580,7 @@ describe( 'MergeCellsCommand', () => {
 				// +----+----+ <-- heading rows
 				// | 50 | 51 |
 				// +----+----+
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', { contents, rowspan: 3 } ],
 					[ '20' ],
 					[ '30' ],
@@ -668,7 +626,7 @@ describe( 'MergeCellsCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[
 						{ rowspan: 2, contents: '<paragraph>[00</paragraph><paragraph>10</paragraph><paragraph>20]</paragraph>' },
 						'01',
@@ -693,7 +651,7 @@ describe( 'MergeCellsCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', { rowspan: 2, contents: '01' } ],
 					[ '10' ],
 					[
@@ -702,53 +660,6 @@ describe( 'MergeCellsCommand', () => {
 							contents: '<paragraph>[20</paragraph><paragraph>21</paragraph>' +
 								'<paragraph>30</paragraph><paragraph>31]</paragraph>'
 						}
-					]
-				] ) );
-			} );
-
-			it( 'should remove all empty rows and columns', () => {
-				setData( model, modelTable( [
-					[ '00', '01', '02' ],
-					[ '10', '11', '12' ],
-					[ '20', '21', '22' ]
-				] ) );
-
-				tableSelection.setCellSelection(
-					root.getNodeByPath( [ 0, 0, 0 ] ),
-					root.getNodeByPath( [ 0, 2, 2 ] )
-				);
-
-				command.execute();
-
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[
-						'<paragraph>[00</paragraph><paragraph>01</paragraph><paragraph>02</paragraph>' +
-						'<paragraph>10</paragraph><paragraph>11</paragraph><paragraph>12</paragraph>' +
-						'<paragraph>20</paragraph><paragraph>21</paragraph><paragraph>22]</paragraph>'
-					]
-				] ) );
-			} );
-
-			it( 'should remove all empty rows and columns (asymmetrical case)', () => {
-				setData( model, modelTable( [
-					[ '00', '01', { contents: '02', rowspan: 3 } ],
-					[ '10', '11' ],
-					[ '20', '21' ]
-				] ) );
-
-				tableSelection.setCellSelection(
-					root.getNodeByPath( [ 0, 0, 0 ] ),
-					root.getNodeByPath( [ 0, 2, 1 ] )
-				);
-
-				command.execute();
-
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[
-						'<paragraph>[00</paragraph><paragraph>01</paragraph>' +
-						'<paragraph>10</paragraph><paragraph>11</paragraph>' +
-						'<paragraph>20</paragraph><paragraph>21]</paragraph>',
-						'02'
 					]
 				] ) );
 			} );

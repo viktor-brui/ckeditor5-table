@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,15 +7,14 @@
  * @module table/table
  */
 
-import { Plugin } from 'ckeditor5/src/core';
-import { Widget } from 'ckeditor5/src/widget';
+import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
 
 import TableEditing from './tableediting';
 import TableUI from './tableui';
 import TableSelection from './tableselection';
 import TableClipboard from './tableclipboard';
-import TableKeyboard from './tablekeyboard';
-import TableMouse from './tablemouse';
+import TableNavigation from './tablenavigation';
+import Widget from '@ckeditor/ckeditor5-widget/src/widget';
 
 import '../theme/table.css';
 
@@ -28,8 +27,7 @@ import '../theme/table.css';
  *
  * * {@link module:table/tableediting~TableEditing editing feature},
  * * {@link module:table/tableselection~TableSelection selection feature},
- * * {@link module:table/tablekeyboard~TableKeyboard keyboard navigation feature},
- * * {@link module:table/tablemouse~TableMouse mouse selection feature},
+ * * {@link module:table/tablenavigation~TableNavigation keyboard navigation feature},
  * * {@link module:table/tableclipboard~TableClipboard clipboard feature},
  * * {@link module:table/tableui~TableUI UI feature}.
  *
@@ -40,7 +38,7 @@ export default class Table extends Plugin {
 	 * @inheritDoc
 	 */
 	static get requires() {
-		return [ TableEditing, TableUI, TableSelection, TableMouse, TableKeyboard, TableClipboard, Widget ];
+		return [ TableEditing, TableUI, TableSelection, TableClipboard, TableNavigation, Widget ];
 	}
 
 	/**
@@ -72,23 +70,6 @@ export default class Table extends Plugin {
  * Read more in {@link module:table/table~TableConfig}.
  *
  * @member {module:table/table~TableConfig} module:core/editor/editorconfig~EditorConfig#table
- */
-
-/**
- * Number of rows and columns to render by default as table heading when inserting new tables.
- *
- * You can configure it like this:
- *
- *		const tableConfig = {
- *			defaultHeadings: {
- *				rows: 1,
- *				columns: 1
- *			}
- *		};
- *
- * Both rows and columns properties are optional defaulting to 0 (no heading).
- *
- * @member {Object} module:table/table~TableConfig#defaultHeadings
  */
 
 /**

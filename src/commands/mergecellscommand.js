@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,10 +7,10 @@
  * @module table/commands/mergecellscommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
 import TableUtils from '../tableutils';
-import { updateNumericAttribute } from '../utils/common';
-import { removeEmptyRowsColumns } from '../utils/structure';
+import { findAncestor, updateNumericAttribute } from './utils';
+import { isSelectionRectangular, getSelectedTableCells } from '../utils';
 
 /**
  * The merge cells command.
@@ -28,10 +28,8 @@ export default class MergeCellsCommand extends Command {
 	 * @inheritDoc
 	 */
 	refresh() {
-		const tableUtils = this.editor.plugins.get( TableUtils );
-
-		const selectedTableCells = tableUtils.getSelectedTableCells( this.editor.model.document.selection );
-		this.isEnabled = tableUtils.isSelectionRectangular( selectedTableCells, this.editor.plugins.get( TableUtils ) );
+		const selectedTableCells = getSelectedTableCells( this.editor.model.document.selection );
+		this.isEnabled = isSelectionRectangular( selectedTableCells, this.editor.plugins.get( TableUtils ) );
 	}
 
 	/**
@@ -44,24 +42,38 @@ export default class MergeCellsCommand extends Command {
 		const tableUtils = this.editor.plugins.get( TableUtils );
 
 		model.change( writer => {
-			const selectedTableCells = tableUtils.getSelectedTableCells( model.document.selection );
+			const selectedTableCells = getSelectedTableCells( model.document.selection );
 
 			// All cells will be merged into the first one.
 			const firstTableCell = selectedTableCells.shift();
+
+			// Set the selection in cell that other cells are being merged to prevent model-selection-range-intersects error in undo.
+			// See https://github.com/ckeditor/ckeditor5/issues/6634.
+			// May be fixed by: https://github.com/ckeditor/ckeditor5/issues/6639.
+			writer.setSelection( firstTableCell, 0 );
 
 			// Update target cell dimensions.
 			const { mergeWidth, mergeHeight } = getMergeDimensions( firstTableCell, selectedTableCells, tableUtils );
 			updateNumericAttribute( 'colspan', mergeWidth, firstTableCell, writer );
 			updateNumericAttribute( 'rowspan', mergeHeight, firstTableCell, writer );
 
+			const emptyRowsIndexes = [];
+
 			for ( const tableCell of selectedTableCells ) {
+				const tableRow = tableCell.parent;
+
 				mergeTableCells( tableCell, firstTableCell, writer );
+
+				if ( !tableRow.childCount ) {
+					emptyRowsIndexes.push( tableRow.index );
+				}
 			}
 
-			const table = firstTableCell.findAncestor( 'table' );
+			if ( emptyRowsIndexes.length ) {
+				const table = findAncestor( 'table', firstTableCell );
 
-			// Remove rows and columns that become empty (have no anchored cells).
-			removeEmptyRowsColumns( table, tableUtils );
+				emptyRowsIndexes.reverse().forEach( row => tableUtils.removeRows( table, { at: row, batch: writer.batch } ) );
+			}
 
 			writer.setSelection( firstTableCell, 'in' );
 		} );
@@ -93,7 +105,7 @@ function mergeTableCells( cellBeingMerged, targetCell, writer ) {
 // @param {module:engine/model/element~Element} tableCell
 // @returns {Boolean}
 function isEmpty( tableCell ) {
-	return tableCell.childCount == 1 && tableCell.getChild( 0 ).is( 'element', 'paragraph' ) && tableCell.getChild( 0 ).isEmpty;
+	return tableCell.childCount == 1 && tableCell.getChild( 0 ).is( 'paragraph' ) && tableCell.getChild( 0 ).isEmpty;
 }
 
 function getMergeDimensions( firstTableCell, selectedTableCells, tableUtils ) {

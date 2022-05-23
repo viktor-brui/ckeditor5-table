@@ -1,16 +1,15 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
 import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
 
-import TableEditing from '../../src/tableediting';
-import { modelTable } from '../_utils/utils';
-
 import MergeCellCommand from '../../src/commands/mergecellcommand';
+import { defaultConversion, defaultSchema, modelTable } from '../_utils/utils';
+import TableUtils from '../../src/tableutils';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 
 describe( 'MergeCellCommand', () => {
 	let editor, model, command, root;
@@ -18,12 +17,15 @@ describe( 'MergeCellCommand', () => {
 	beforeEach( () => {
 		return ModelTestEditor
 			.create( {
-				plugins: [ Paragraph, TableEditing ]
+				plugins: [ TableUtils ]
 			} )
 			.then( newEditor => {
 				editor = newEditor;
 				model = editor.model;
 				root = model.document.getRoot( 'main' );
+
+				defaultSchema( model.schema );
+				defaultConversion( editor.conversion );
 			} );
 	} );
 
@@ -63,9 +65,7 @@ describe( 'MergeCellCommand', () => {
 
 			it( 'should be false if in a cell that has sibling but with different rowspan', () => {
 				setData( model, modelTable( [
-					[ { rowspan: 2, contents: '00[]' }, { rowspan: 3, contents: '01' }, '02' ],
-					[ '12' ],
-					[ '20', '22' ]
+					[ { rowspan: 2, contents: '00[]' }, { rowspan: 3, contents: '01' } ]
 				] ) );
 
 				expect( command.isEnabled ).to.be.false;
@@ -173,9 +173,7 @@ describe( 'MergeCellCommand', () => {
 
 			it( 'should be undefined if in a cell that has sibling but with different rowspan', () => {
 				setData( model, modelTable( [
-					[ { rowspan: 2, contents: '00[]' }, { rowspan: 3, contents: '01' }, '02' ],
-					[ '12' ],
-					[ '20', '22' ]
+					[ { rowspan: 2, contents: '00[]' }, { rowspan: 3, contents: '01' } ]
 				] ) );
 
 				expect( command.value ).to.be.undefined;
@@ -191,69 +189,49 @@ describe( 'MergeCellCommand', () => {
 		describe( 'execute()', () => {
 			it( 'should merge table cells', () => {
 				setData( model, modelTable( [
-					[ '[]00', '01' ],
-					[ '10', '11' ]
-				] ) );
-
-				command.execute();
-
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ],
-					[ '10', '11' ]
-				] ) );
-			} );
-
-			it( 'should merge table cells and remove empty columns', () => {
-				setData( model, modelTable( [
 					[ '[]00', '01' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ '<paragraph>[00</paragraph><paragraph>01]</paragraph>' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ]
 				] ) );
 			} );
 
 			it( 'should result in single empty paragraph if both cells are empty', () => {
 				setData( model, modelTable( [
-					[ '[]', '' ],
-					[ '10', '11' ]
+					[ '[]', '' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[]</paragraph>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[]</paragraph>' } ]
 				] ) );
 			} );
 
 			it( 'should result in single paragraph (other cell is empty)', () => {
 				setData( model, modelTable( [
-					[ 'foo[]', '' ],
-					[ '10', '11' ]
+					[ 'foo[]', '' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ]
 				] ) );
 			} );
 
 			it( 'should result in single paragraph (selection cell is empty)', () => {
 				setData( model, modelTable( [
-					[ '[]', 'foo' ],
-					[ '10', '11' ]
+					[ '[]', 'foo' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ]
 				] ) );
 			} );
 
@@ -265,15 +243,13 @@ describe( 'MergeCellCommand', () => {
 				} );
 
 				setData( model, modelTable( [
-					[ '<block>[]</block>', '<block></block>' ],
-					[ '10', '11' ]
+					[ '<block>[]</block>', '<block></block>' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<block>[</block><block>]</block>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<block>[</block><block>]</block>' } ]
 				] ) );
 			} );
 		} );
@@ -311,9 +287,7 @@ describe( 'MergeCellCommand', () => {
 
 			it( 'should be false if in a cell that has sibling but with different rowspan', () => {
 				setData( model, modelTable( [
-					[ { rowspan: 2, contents: '00' }, { rowspan: 3, contents: '01[]' } ],
-					[ '12' ],
-					[ '20', '22' ]
+					[ { rowspan: 2, contents: '00' }, { rowspan: 3, contents: '01[]' } ]
 				] ) );
 
 				expect( command.isEnabled ).to.be.false;
@@ -413,9 +387,7 @@ describe( 'MergeCellCommand', () => {
 
 			it( 'should be undefined if in a cell that has sibling but with different rowspan', () => {
 				setData( model, modelTable( [
-					[ { rowspan: 2, contents: '00' }, { rowspan: 3, contents: '01[]' } ],
-					[ '12' ],
-					[ '20', '22' ]
+					[ { rowspan: 2, contents: '00' }, { rowspan: 3, contents: '01[]' } ]
 				] ) );
 
 				expect( command.value ).to.be.undefined;
@@ -431,69 +403,49 @@ describe( 'MergeCellCommand', () => {
 		describe( 'execute()', () => {
 			it( 'should merge table cells', () => {
 				setData( model, modelTable( [
-					[ '00', '[]01' ],
-					[ '10', '11' ]
-				] ) );
-
-				command.execute();
-
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ],
-					[ '10', '11' ]
-				] ) );
-			} );
-
-			it( 'should merge table cells and remove empty columns', () => {
-				setData( model, modelTable( [
 					[ '00', '[]01' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ '<paragraph>[00</paragraph><paragraph>01]</paragraph>' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ]
 				] ) );
 			} );
 
 			it( 'should result in single empty paragraph if both cells are empty', () => {
 				setData( model, modelTable( [
-					[ '', '[]' ],
-					[ '10', '11' ]
+					[ '', '[]' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[]</paragraph>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[]</paragraph>' } ]
 				] ) );
 			} );
 
 			it( 'should result in single paragraph (other cell is empty)', () => {
 				setData( model, modelTable( [
-					[ '', 'foo[]' ],
-					[ '10', '11' ]
+					[ '', 'foo[]' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ]
 				] ) );
 			} );
 
 			it( 'should result in single paragraph (selection cell is empty)', () => {
 				setData( model, modelTable( [
-					[ 'foo', '[]' ],
-					[ '10', '11' ]
+					[ 'foo', '[]' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<paragraph>[foo]</paragraph>' } ]
 				] ) );
 			} );
 
@@ -505,15 +457,13 @@ describe( 'MergeCellCommand', () => {
 				} );
 
 				setData( model, modelTable( [
-					[ '<block></block>', '<block>[]</block>' ],
-					[ '10', '11' ]
+					[ '<block></block>', '<block>[]</block>' ]
 				] ) );
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
-					[ { colspan: 2, contents: '<block>[</block><block>]</block>' } ],
-					[ '10', '11' ]
+				assertEqualMarkup( getData( model ), modelTable( [
+					[ { colspan: 2, contents: '<block>[</block><block>]</block>' } ]
 				] ) );
 			} );
 		} );
@@ -606,30 +556,6 @@ describe( 'MergeCellCommand', () => {
 				expect( command.value ).to.be.undefined;
 			} );
 
-			it( 'should be undefined if in last row - ignore non-row elements', () => {
-				model.schema.register( 'foo', {
-					allowIn: 'table',
-					allowContentOf: '$block',
-					isLimit: true
-				} );
-
-				setData( model,
-					'<table>' +
-						'<tableRow>' +
-							'<tableCell><paragraph>00</paragraph></tableCell>' +
-							'<tableCell><paragraph>10</paragraph></tableCell>' +
-						'</tableRow>' +
-						'<tableRow>' +
-							'<tableCell><paragraph>10[]</paragraph></tableCell>' +
-							'<tableCell><paragraph>11</paragraph></tableCell>' +
-						'</tableRow>' +
-						'<foo>An extra element</foo>' +
-					'</table>'
-				);
-
-				expect( command.value ).to.be.undefined;
-			} );
-
 			it( 'should be set to mergeable cell with the same rowspan', () => {
 				setData( model, modelTable( [
 					[ { colspan: 2, contents: '00[]' }, '02' ],
@@ -674,7 +600,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', { rowspan: 2, contents: '<paragraph>[01</paragraph><paragraph>11]</paragraph>' } ],
 					[ '10' ]
 				] ) );
@@ -688,7 +614,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '[]' }, '' ],
 					[ '' ]
 				] ) );
@@ -702,7 +628,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '[foo]' }, '' ],
 					[ '' ]
 				] ) );
@@ -716,7 +642,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '[foo]' }, '' ],
 					[ '' ]
 				] ) );
@@ -736,7 +662,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '<block>[</block><block>]</block>' }, '' ],
 					[ '' ]
 				] ) );
@@ -751,7 +677,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '<paragraph>[01</paragraph><paragraph>11]</paragraph>', { rowspan: 2, contents: '02' } ],
 					[ '20', '21' ]
 				] ) );
@@ -768,7 +694,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '00' }, '01', '02' ],
 					[ '11', '12' ],
 					[ '20', '<paragraph>[21</paragraph><paragraph>31]</paragraph>', { rowspan: 2, contents: '22' } ],
@@ -792,7 +718,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '<paragraph>[01</paragraph><paragraph>11]</paragraph>' ],
 					[ '20', '21' ]
 				], { headingRows: 1 } ) );
@@ -957,7 +883,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', { rowspan: 2, contents: '<paragraph>[01</paragraph><paragraph>11]</paragraph>' } ],
 					[ '10' ]
 				] ) );
@@ -971,7 +897,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '[]' }, '' ],
 					[ '' ]
 				] ) );
@@ -985,7 +911,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '[foo]' }, '' ],
 					[ '' ]
 				] ) );
@@ -999,7 +925,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '[foo]' }, '' ],
 					[ '' ]
 				] ) );
@@ -1019,7 +945,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '<block>[</block><block>]</block>' }, '' ],
 					[ '' ]
 				] ) );
@@ -1035,7 +961,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 3, contents: '00' }, '11', '12', '13' ],
 					[
 						{ rowspan: 2, contents: '21' },
@@ -1056,7 +982,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '<paragraph>[01</paragraph><paragraph>11]</paragraph>', { rowspan: 2, contents: '02' } ],
 					[ '20', '21' ]
 				] ) );
@@ -1073,7 +999,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ { rowspan: 2, contents: '00' }, '01', '02' ],
 					[ '11', '12' ],
 					[ '20', '<paragraph>[21</paragraph><paragraph>31]</paragraph>', { rowspan: 2, contents: '22' } ],
@@ -1097,7 +1023,7 @@ describe( 'MergeCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '<paragraph>[01</paragraph><paragraph>11]</paragraph>' ],
 					[ '20', '21' ]
 				], { headingRows: 1 } ) );

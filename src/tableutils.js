@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,12 +7,10 @@
  * @module table/tableutils
  */
 
-import { CKEditorError } from 'ckeditor5/src/utils';
-import { Plugin } from 'ckeditor5/src/core';
+import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
 
 import TableWalker from './tablewalker';
-import { createEmptyTableCell, updateNumericAttribute } from './utils/common';
-import { removeEmptyColumns, removeEmptyRows } from './utils/structure';
+import { createEmptyTableCell, updateNumericAttribute } from './commands/utils';
 
 /**
  * The table utilities plugin.
@@ -25,14 +23,6 @@ export default class TableUtils extends Plugin {
 	 */
 	static get pluginName() {
 		return 'TableUtils';
-	}
-
-	/**
-	 * @inheritDoc
-	 */
-	init() {
-		this.decorate( 'insertColumns' );
-		this.decorate( 'insertRows' );
 	}
 
 	/**
@@ -68,7 +58,7 @@ export default class TableUtils extends Plugin {
 
 		const rowIndex = table.getChildIndex( tableRow );
 
-		const tableWalker = new TableWalker( table, { row: rowIndex } );
+		const tableWalker = new TableWalker( table, { startRow: rowIndex, endRow: rowIndex } );
 
 		for ( const { cell, row, column } of tableWalker ) {
 			if ( cell === tableCell ) {
@@ -83,35 +73,21 @@ export default class TableUtils extends Plugin {
 	 *
 	 *		model.change( ( writer ) => {
 	 *			// Create a table of 2 rows and 7 columns:
-	 *			const table = tableUtils.createTable( writer, { rows: 2, columns: 7 } );
+	 *			const table = tableUtils.createTable( writer, 2, 7);
 	 *
 	 *			// Insert a table to the model at the best position taking the current selection:
 	 *			model.insertContent( table );
 	 *		}
 	 *
 	 * @param {module:engine/model/writer~Writer} writer The model writer.
-	 * @param {Object} options
-	 * @param {Number} [options.rows=2] The number of rows to create.
-	 * @param {Number} [options.columns=2] The number of columns to create.
-	 * @param {Number} [options.headingRows=0] The number of heading rows.
-	 * @param {Number} [options.headingColumns=0] The number of heading columns.
+	 * @param {Number} rows The number of rows to create.
+	 * @param {Number} columns The number of columns to create.
 	 * @returns {module:engine/model/element~Element} The created table element.
 	 */
-	createTable( writer, options ) {
+	createTable( writer, rows, columns ) {
 		const table = writer.createElement( 'table' );
 
-		const rows = parseInt( options.rows ) || 2;
-		const columns = parseInt( options.columns ) || 2;
-
 		createEmptyRows( writer, table, 0, rows, columns );
-
-		if ( options.headingRows ) {
-			updateNumericAttribute( 'headingRows', Math.min( options.headingRows, rows ), table, writer, 0 );
-		}
-
-		if ( options.headingColumns ) {
-			updateNumericAttribute( 'headingColumns', Math.min( options.headingColumns, columns ), table, writer, 0 );
-		}
 
 		return table;
 	}
@@ -154,25 +130,12 @@ export default class TableUtils extends Plugin {
 		const rows = this.getRows( table );
 		const columns = this.getColumns( table );
 
-		if ( insertAt > rows ) {
-			/**
-			 * The `options.at` points at a row position that does not exist.
-			 *
-			 * @error tableutils-insertrows-insert-out-of-range
-			 */
-			throw new CKEditorError(
-				'tableutils-insertrows-insert-out-of-range',
-				this,
-				{ options }
-			);
-		}
-
 		model.change( writer => {
 			const headingRows = table.getAttribute( 'headingRows' ) || 0;
 
 			// Inserting rows inside heading section requires to update `headingRows` attribute as the heading section will grow.
 			if ( headingRows > insertAt ) {
-				updateNumericAttribute( 'headingRows', headingRows + rowsToInsert, table, writer, 0 );
+				writer.setAttribute( 'headingRows', headingRows + rowsToInsert, table );
 			}
 
 			// Inserting at the end or at the beginning of a table doesn't require to calculate anything special.
@@ -189,8 +152,8 @@ export default class TableUtils extends Plugin {
 			// Store spans of the reference row to reproduce it's structure. This array is column number indexed.
 			const rowColSpansMap = new Array( columns ).fill( 1 );
 
-			for ( const { row, column, cellHeight, cellWidth, cell } of tableIterator ) {
-				const lastCellRow = row + cellHeight - 1;
+			for ( const { row, column, rowspan, colspan, cell } of tableIterator ) {
+				const lastCellRow = row + rowspan - 1;
 
 				const isOverlappingInsertedRow = row < insertAt && insertAt <= lastCellRow;
 				const isReferenceRow = row <= copyStructureFrom && copyStructureFrom <= lastCellRow;
@@ -198,14 +161,14 @@ export default class TableUtils extends Plugin {
 				// If the cell is row-spanned and overlaps the inserted row, then reserve space for it in the row map.
 				if ( isOverlappingInsertedRow ) {
 					// This cell overlaps the inserted rows so we need to expand it further.
-					writer.setAttribute( 'rowspan', cellHeight + rowsToInsert, cell );
+					writer.setAttribute( 'rowspan', rowspan + rowsToInsert, cell );
 
 					// Mark this cell with negative number to indicate how many cells should be skipped when adding the new cells.
-					rowColSpansMap[ column ] = -cellWidth;
+					rowColSpansMap[ column ] = -colspan;
 				}
 				// Store the colspan from reference row.
 				else if ( isCopyStructure && isReferenceRow ) {
-					rowColSpansMap[ column ] = cellWidth;
+					rowColSpansMap[ column ] = colspan;
 				}
 			}
 
@@ -275,42 +238,43 @@ export default class TableUtils extends Plugin {
 			// Inserting at the end and at the beginning of a table doesn't require to calculate anything special.
 			if ( insertAt === 0 || tableColumns === insertAt ) {
 				for ( const tableRow of table.getChildren() ) {
-					// Ignore non-row elements inside the table (e.g. caption).
-					if ( !tableRow.is( 'element', 'tableRow' ) ) {
-						continue;
-					}
-
 					createCells( columnsToInsert, writer, writer.createPositionAt( tableRow, insertAt ? 'end' : 0 ) );
 				}
 
 				return;
 			}
 
-			const tableWalker = new TableWalker( table, { column: insertAt, includeAllSlots: true } );
+			const tableWalker = new TableWalker( table, { column: insertAt, includeSpanned: true } );
 
-			for ( const tableSlot of tableWalker ) {
-				const { row, cell, cellAnchorColumn, cellAnchorRow, cellWidth, cellHeight } = tableSlot;
-
+			for ( const { row, cell, cellIndex } of tableWalker ) {
 				// When iterating over column the table walker outputs either:
 				// - cells at given column index (cell "e" from method docs),
-				// - spanned columns (spanned cell from row between cells "g" and "h" - spanned by "e", only if `includeAllSlots: true`),
+				// - spanned columns (spanned cell from row between cells "g" and "h" - spanned by "e", only if `includeSpanned: true`),
 				// - or a cell from the same row which spans over this column (cell "a").
 
-				if ( cellAnchorColumn < insertAt ) {
-					// If cell is anchored in previous column, it is a cell that spans over an inserted column (cell "a" & "i").
+				const rowspan = parseInt( cell.getAttribute( 'rowspan' ) || 1 );
+				const colspan = parseInt( cell.getAttribute( 'colspan' ) || 1 );
+
+				if ( cellIndex !== insertAt && colspan > 1 ) {
+					// If column is different than `insertAt`, it is a cell that spans over an inserted column (cell "a" & "i").
 					// For such cells expand them by a number of columns inserted.
-					writer.setAttribute( 'colspan', cellWidth + columnsToInsert, cell );
+					writer.setAttribute( 'colspan', colspan + columnsToInsert, cell );
 
-					// This cell will overlap cells in rows below so skip them (because of `includeAllSlots` option) - (cell "a")
-					const lastCellRow = cellAnchorRow + cellHeight - 1;
+					// The `includeSpanned` option will output the "empty"/spanned column so skip this row already.
+					tableWalker.skipRow( row );
 
-					for ( let i = row; i <= lastCellRow; i++ ) {
-						tableWalker.skipRow( i );
+					// This cell will overlap cells in rows below so skip them also (because of `includeSpanned` option) - (cell "a")
+					if ( rowspan > 1 ) {
+						for ( let i = row + 1; i < row + rowspan; i++ ) {
+							tableWalker.skipRow( i );
+						}
 					}
 				} else {
-					// It's either cell at this column index or spanned cell by a row-spanned cell from row above.
+					// It's either cell at this column index or spanned cell by a rowspanned cell from row above.
 					// In table above it's cell "e" and a spanned position from row below (empty cell between cells "g" and "h")
-					createCells( columnsToInsert, writer, tableSlot.getPositionBefore() );
+					const insertPosition = writer.createPositionAt( table.getChild( row ), cellIndex );
+
+					createCells( columnsToInsert, writer, insertPosition );
 				}
 			}
 		} );
@@ -348,24 +312,11 @@ export default class TableUtils extends Plugin {
 		const model = this.editor.model;
 
 		const rowsToRemove = options.rows || 1;
-		const rowCount = this.getRows( table );
 		const first = options.at;
 		const last = first + rowsToRemove - 1;
+		const batch = options.batch || 'default';
 
-		if ( last > rowCount - 1 ) {
-			/**
-			 * The `options.at` param must point at existing row and `options.rows` must not exceed the rows in the table.
-			 *
-			 * @error tableutils-removerows-row-index-out-of-range
-			 */
-			throw new CKEditorError(
-				'tableutils-removerows-row-index-out-of-range',
-				this,
-				{ table, options }
-			);
-		}
-
-		model.change( writer => {
+		model.enqueueChange( batch, writer => {
 			// Removing rows from the table require that most calculations to be done prior to changing table structure.
 			// Preparations must be done in the same enqueueChange callback to use the current table structure.
 
@@ -392,14 +343,7 @@ export default class TableUtils extends Plugin {
 			}
 
 			// 2d. Adjust heading rows if removed rows were in a heading section.
-			updateHeadingRows( table, first, last, writer );
-
-			// 2e. Remove empty columns (without anchored cells) if there are any.
-			if ( !removeEmptyColumns( table, this ) ) {
-				// If there wasn't any empty columns then we still need to check if this wasn't called
-				// because of cleaning empty rows and we only removed one of them.
-				removeEmptyRows( table, this );
-			}
+			updateHeadingRows( table, first, last, model, batch );
 		} );
 	}
 
@@ -441,24 +385,29 @@ export default class TableUtils extends Plugin {
 		model.change( writer => {
 			adjustHeadingColumns( table, { first, last }, writer );
 
+			const emptyRowsIndexes = [];
+
 			for ( let removedColumnIndex = last; removedColumnIndex >= first; removedColumnIndex-- ) {
-				for ( const { cell, column, cellWidth } of [ ...new TableWalker( table ) ] ) {
+				for ( const { cell, column, colspan } of [ ...new TableWalker( table ) ] ) {
 					// If colspaned cell overlaps removed column decrease its span.
-					if ( column <= removedColumnIndex && cellWidth > 1 && column + cellWidth > removedColumnIndex ) {
-						updateNumericAttribute( 'colspan', cellWidth - 1, cell, writer );
+					if ( column <= removedColumnIndex && colspan > 1 && column + colspan > removedColumnIndex ) {
+						updateNumericAttribute( 'colspan', colspan - 1, cell, writer );
 					} else if ( column === removedColumnIndex ) {
+						const cellRow = cell.parent;
+
 						// The cell in removed column has colspan of 1.
 						writer.remove( cell );
+
+						// If the cell was the last one in the row, get rid of the entire row.
+						// https://github.com/ckeditor/ckeditor5/issues/6429
+						if ( !cellRow.childCount ) {
+							emptyRowsIndexes.push( cellRow.index );
+						}
 					}
 				}
 			}
 
-			// Remove empty rows that could appear after removing columns.
-			if ( !removeEmptyRows( table, this ) ) {
-				// If there wasn't any empty rows then we still need to check if this wasn't called
-				// because of cleaning empty columns and we only removed one of them.
-				removeEmptyColumns( table, this );
-			}
+			emptyRowsIndexes.reverse().forEach( row => this.removeRows( table, { at: row, batch: writer.batch } ) );
 		} );
 	}
 
@@ -550,16 +499,16 @@ export default class TableUtils extends Plugin {
 				const { column: splitCellColumn } = tableMap.find( ( { cell } ) => cell === tableCell );
 
 				// Find cells which needs to be expanded vertically - those on the same column or those that spans over split cell's column.
-				const cellsToUpdate = tableMap.filter( ( { cell, cellWidth, column } ) => {
+				const cellsToUpdate = tableMap.filter( ( { cell, colspan, column } ) => {
 					const isOnSameColumn = cell !== tableCell && column === splitCellColumn;
-					const spansOverColumn = ( column < splitCellColumn && column + cellWidth > splitCellColumn );
+					const spansOverColumn = ( column < splitCellColumn && column + colspan > splitCellColumn );
 
 					return isOnSameColumn || spansOverColumn;
 				} );
 
 				// Expand cells vertically.
-				for ( const { cell, cellWidth } of cellsToUpdate ) {
-					writer.setAttribute( 'colspan', cellWidth + cellsToInsert, cell );
+				for ( const { cell, colspan } of cellsToUpdate ) {
+					writer.setAttribute( 'colspan', colspan + cellsToInsert, cell );
 				}
 
 				// Second step: create columns after split cell.
@@ -659,7 +608,7 @@ export default class TableUtils extends Plugin {
 				const tableMap = [ ...new TableWalker( table, {
 					startRow: splitCellRow,
 					endRow: splitCellRow + rowspan - 1,
-					includeAllSlots: true
+					includeSpanned: true
 				} ) ];
 
 				// Get spans of new (inserted) cells and span to update of split cell.
@@ -682,9 +631,7 @@ export default class TableUtils extends Plugin {
 					newCellsAttributes.colspan = colspan;
 				}
 
-				for ( const tableSlot of tableMap ) {
-					const { column, row } = tableSlot;
-
+				for ( const { column, row, cellIndex } of tableMap ) {
 					// As both newly created cells and the split cell might have rowspan,
 					// the insertion of new cells must go to appropriate rows:
 					//
@@ -696,7 +643,9 @@ export default class TableUtils extends Plugin {
 					const isInEvenlySplitRow = ( row + splitCellRow + updatedSpan ) % newCellsSpan === 0;
 
 					if ( isAfterSplitCell && isOnSameColumn && isInEvenlySplitRow ) {
-						createCells( 1, writer, tableSlot.getPositionBefore(), newCellsAttributes );
+						const position = writer.createPositionAt( table.getChild( row ), cellIndex );
+
+						createCells( 1, writer, position, newCellsAttributes );
 					}
 				}
 			}
@@ -710,12 +659,12 @@ export default class TableUtils extends Plugin {
 				const tableMap = [ ...new TableWalker( table, { startRow: 0, endRow: splitCellRow } ) ];
 
 				// First step: expand cells.
-				for ( const { cell, cellHeight, row } of tableMap ) {
+				for ( const { cell, rowspan, row } of tableMap ) {
 					// Expand rowspan of cells that are either:
 					// - on the same row as current cell,
 					// - or are below split cell row and overlaps that row.
-					if ( cell !== tableCell && row + cellHeight > splitCellRow ) {
-						const rowspanToSet = cellHeight + cellsToInsert;
+					if ( cell !== tableCell && row + rowspan > splitCellRow ) {
+						const rowspanToSet = rowspan + cellsToInsert;
 
 						writer.setAttribute( 'rowspan', rowspanToSet, cell );
 					}
@@ -751,8 +700,6 @@ export default class TableUtils extends Plugin {
 	 */
 	getColumns( table ) {
 		// Analyze first row only as all the rows should have the same width.
-		// Using the first row without checking if it's a tableRow because we expect
-		// that table will have only tableRow model elements at the beginning.
 		const row = table.getChild( 0 );
 
 		return [ ...row.getChildren() ].reduce( ( columns, row ) => {
@@ -763,7 +710,7 @@ export default class TableUtils extends Plugin {
 	}
 
 	/**
-	 * Returns the number of rows for a given table. Any other element present in the table model is omitted.
+	 * Returns the number of rows for a given table.
 	 *
 	 *		editor.plugins.get( 'TableUtils' ).getRows( table );
 	 *
@@ -771,291 +718,8 @@ export default class TableUtils extends Plugin {
 	 * @returns {Number}
 	 */
 	getRows( table ) {
-		// Rowspan not included due to #6427.
-		return Array.from( table.getChildren() )
-			.reduce( ( rowCount, child ) => child.is( 'element', 'tableRow' ) ? rowCount + 1 : rowCount, 0 );
-	}
-
-	/**
-	 * Creates an instance of the table walker.
-	 *
-	 * The table walker iterates internally by traversing the table from row index = 0 and column index = 0.
-	 * It walks row by row and column by column in order to output values defined in the options.
-	 * By default it will output only the locations that are occupied by a cell. To include also spanned rows and columns,
-	 * pass the `includeAllSlots` option.
-	 *
-	 * @protected
-	 * @param {module:engine/model/element~Element} table A table over which the walker iterates.
-	 * @param {Object} [options={}] An object with configuration.
-	 * @param {Number} [options.row] A row index for which this iterator will output cells.
-	 * Can't be used together with `startRow` and `endRow`.
-	 * @param {Number} [options.startRow=0] A row index from which this iterator should start. Can't be used together with `row`.
-	 * @param {Number} [options.endRow] A row index at which this iterator should end. Can't be used together with `row`.
-	 * @param {Number} [options.column] A column index for which this iterator will output cells.
-	 * Can't be used together with `startColumn` and `endColumn`.
-	 * @param {Number} [options.startColumn=0] A column index from which this iterator should start. Can't be used together with `column`.
-	 * @param {Number} [options.endColumn] A column index at which this iterator should end. Can't be used together with `column`.
-	 * @param {Boolean} [options.includeAllSlots=false] Also return values for spanned cells.
-	 */
-	createTableWalker( table, options = {} ) {
-		return new TableWalker( table, options );
-	}
-
-	/**
-	 * Returns all model table cells that are fully selected (from the outside)
-	 * within the provided model selection's ranges.
-	 *
-	 * To obtain the cells selected from the inside, use
-	 * {@link #getTableCellsContainingSelection}.
-	 *
-	 * @param {module:engine/model/selection~Selection} selection
-	 * @returns {Array.<module:engine/model/element~Element>}
-	 */
-	getSelectedTableCells( selection ) {
-		const cells = [];
-
-		for ( const range of this.sortRanges( selection.getRanges() ) ) {
-			const element = range.getContainedElement();
-
-			if ( element && element.is( 'element', 'tableCell' ) ) {
-				cells.push( element );
-			}
-		}
-
-		return cells;
-	}
-
-	/**
-	 * Returns all model table cells that the provided model selection's ranges
-	 * {@link module:engine/model/range~Range#start} inside.
-	 *
-	 * To obtain the cells selected from the outside, use
-	 * {@link #getSelectedTableCells}.
-	 *
-	 * @param {module:engine/model/selection~Selection} selection
-	 * @returns {Array.<module:engine/model/element~Element>}
-	 */
-	getTableCellsContainingSelection( selection ) {
-		const cells = [];
-
-		for ( const range of selection.getRanges() ) {
-			const cellWithSelection = range.start.findAncestor( 'tableCell' );
-
-			if ( cellWithSelection ) {
-				cells.push( cellWithSelection );
-			}
-		}
-
-		return cells;
-	}
-
-	/**
-	 * Returns all model table cells that are either completely selected
-	 * by selection ranges or host selection range
-	 * {@link module:engine/model/range~Range#start start positions} inside them.
-	 *
-	 * Combines {@link #getTableCellsContainingSelection} and
-	 * {@link #getSelectedTableCells}.
-	 *
-	 * @param {module:engine/model/selection~Selection} selection
-	 * @returns {Array.<module:engine/model/element~Element>}
-	 */
-	getSelectionAffectedTableCells( selection ) {
-		const selectedCells = this.getSelectedTableCells( selection );
-
-		if ( selectedCells.length ) {
-			return selectedCells;
-		}
-
-		return this.getTableCellsContainingSelection( selection );
-	}
-
-	/**
-	 * Returns an object with the `first` and `last` row index contained in the given `tableCells`.
-	 *
-	 *		const selectedTableCells = getSelectedTableCells( editor.model.document.selection );
-	*
-	*		const { first, last } = getRowIndexes( selectedTableCells );
-	*
-	*		console.log( `Selected rows: ${ first } to ${ last }` );
-	*
-	* @param {Array.<module:engine/model/element~Element>} tableCells
-	* @returns {Object} Returns an object with the `first` and `last` table row indexes.
-	*/
-	getRowIndexes( tableCells ) {
-		const indexes = tableCells.map( cell => cell.parent.index );
-
-		return this._getFirstLastIndexesObject( indexes );
-	}
-
-	/**
-	 * Returns an object with the `first` and `last` column index contained in the given `tableCells`.
-	 *
-	 *		const selectedTableCells = getSelectedTableCells( editor.model.document.selection );
-	*
-	*		const { first, last } = getColumnIndexes( selectedTableCells );
-	*
-	*		console.log( `Selected columns: ${ first } to ${ last }` );
-	*
-	* @param {Array.<module:engine/model/element~Element>} tableCells
-	* @returns {Object} Returns an object with the `first` and `last` table column indexes.
-	*/
-	getColumnIndexes( tableCells ) {
-		const table = tableCells[ 0 ].findAncestor( 'table' );
-		const tableMap = [ ...new TableWalker( table ) ];
-
-		const indexes = tableMap
-			.filter( entry => tableCells.includes( entry.cell ) )
-			.map( entry => entry.column );
-
-		return this._getFirstLastIndexesObject( indexes );
-	}
-
-	/**
-	 * Checks if the selection contains cells that do not exceed rectangular selection.
-	 *
-	 * In a table below:
-	 *
-	 *		┌───┬───┬───┬───┐
-	*		│ a │ b │ c │ d │
-	*		├───┴───┼───┤   │
-	*		│ e     │ f │   │
-	*		│       ├───┼───┤
-	*		│       │ g │ h │
-	*		└───────┴───┴───┘
-	*
-	* Valid selections are these which create a solid rectangle (without gaps), such as:
-	*   - a, b (two horizontal cells)
-	*   - c, f (two vertical cells)
-	*   - a, b, e (cell "e" spans over four cells)
-	*   - c, d, f (cell d spans over a cell in the row below)
-	*
-	* While an invalid selection would be:
-	*   - a, c (the unselected cell "b" creates a gap)
-	*   - f, g, h (cell "d" spans over a cell from the row of "f" cell - thus creates a gap)
-	*
-	* @param {Array.<module:engine/model/element~Element>} selectedTableCells
-	* @returns {Boolean}
-	*/
-	isSelectionRectangular( selectedTableCells ) {
-		if ( selectedTableCells.length < 2 || !this._areCellInTheSameTableSection( selectedTableCells ) ) {
-			return false;
-		}
-
-		// A valid selection is a fully occupied rectangle composed of table cells.
-		// Below we will calculate the area of a selected table cells and the area of valid selection.
-		// The area of a valid selection is defined by top-left and bottom-right cells.
-		const rows = new Set();
-		const columns = new Set();
-
-		let areaOfSelectedCells = 0;
-
-		for ( const tableCell of selectedTableCells ) {
-			const { row, column } = this.getCellLocation( tableCell );
-			const rowspan = parseInt( tableCell.getAttribute( 'rowspan' ) || 1 );
-			const colspan = parseInt( tableCell.getAttribute( 'colspan' ) || 1 );
-
-			// Record row & column indexes of current cell.
-			rows.add( row );
-			columns.add( column );
-
-			// For cells that spans over multiple rows add also the last row that this cell spans over.
-			if ( rowspan > 1 ) {
-				rows.add( row + rowspan - 1 );
-			}
-
-			// For cells that spans over multiple columns add also the last column that this cell spans over.
-			if ( colspan > 1 ) {
-				columns.add( column + colspan - 1 );
-			}
-
-			areaOfSelectedCells += ( rowspan * colspan );
-		}
-
-		// We can only merge table cells that are in adjacent rows...
-		const areaOfValidSelection = getBiggestRectangleArea( rows, columns );
-
-		return areaOfValidSelection == areaOfSelectedCells;
-	}
-
-	/**
-	 * Returns array of sorted ranges.
-	 *
-	 * @param {Iterable.<module:engine/model/range~Range>} ranges
-	 * @return {Array.<module:engine/model/range~Range>}
-	 */
-	sortRanges( ranges ) {
-		return Array.from( ranges ).sort( compareRangeOrder );
-	}
-
-	/**
-	 * Helper method to get an object with `first` and `last` indexes from an unsorted array of indexes.
-	 *
-	 * @private
-	 * @param {Number[]} indexes
-	 * @returns {Object}
-	 */
-	_getFirstLastIndexesObject( indexes ) {
-		const allIndexesSorted = indexes.sort( ( indexA, indexB ) => indexA - indexB );
-
-		const first = allIndexesSorted[ 0 ];
-		const last = allIndexesSorted[ allIndexesSorted.length - 1 ];
-
-		return { first, last };
-	}
-
-	/**
-	 * Checks if the selection does not mix a header (column or row) with other cells.
-	 *
-	 * For instance, in the table below valid selections consist of cells with the same letter only.
-	 * So, a-a (same heading row and column) or d-d (body cells) are valid while c-d or a-b are not.
-	 *
-	 * header columns
-	 *		  ↓   ↓
-	 *		┌───┬───┬───┬───┐
-	 *		│ a │ a │ b │ b │  ← header row
-	 *		├───┼───┼───┼───┤
-	 *		│ c │ c │ d │ d │
-	 *		├───┼───┼───┼───┤
-	 *		│ c │ c │ d │ d │
-	 *		└───┴───┴───┴───┘
-	 *
-	 * @private
-	 * @param {Array.<module:engine/model/element~Element>} tableCells
-	 * @returns {Boolean}
-	 */
-	_areCellInTheSameTableSection( tableCells ) {
-		const table = tableCells[ 0 ].findAncestor( 'table' );
-
-		const rowIndexes = this.getRowIndexes( tableCells );
-		const headingRows = parseInt( table.getAttribute( 'headingRows' ) || 0 );
-
-		// Calculating row indexes is a bit cheaper so if this check fails we can't merge.
-		if ( !this._areIndexesInSameSection( rowIndexes, headingRows ) ) {
-			return false;
-		}
-
-		const headingColumns = parseInt( table.getAttribute( 'headingColumns' ) || 0 );
-		const columnIndexes = this.getColumnIndexes( tableCells );
-
-		// Similarly cells must be in same column section.
-		return this._areIndexesInSameSection( columnIndexes, headingColumns );
-	}
-
-	/**
-	 * Unified check if table rows/columns indexes are in the same heading/body section.
-	 *
-	 * @private
-	 * @param {Object} params
-	 * @param {Number} params.first
-	 * @param {Number} params.last
-	 * @param {Number} headingSectionSize
-	 */
-	_areIndexesInSameSection( { first, last }, headingSectionSize ) {
-		const firstCellIsInHeading = first < headingSectionSize;
-		const lastCellIsInHeading = last < headingSectionSize;
-
-		return firstCellIsInHeading === lastCellIsInHeading;
+		// Simple row counting, not including rowspan due to #6427.
+		return table.childCount;
 	}
 }
 
@@ -1123,14 +787,21 @@ function adjustHeadingColumns( table, removedColumnIndexes, writer ) {
 }
 
 // Calculates a new heading rows value for removing rows from heading section.
-function updateHeadingRows( table, first, last, writer ) {
-	const headingRows = table.getAttribute( 'headingRows' ) || 0;
+function updateHeadingRows( table, first, last, model, batch ) {
+	// Must be done after the changes in table structure (removing rows).
+	// Otherwise the downcast converter for headingRows attribute will fail.
+	// See https://github.com/ckeditor/ckeditor5/issues/6391.
+	//
+	// Must be completely wrapped in enqueueChange to get the current table state (after applying other enqueued changes).
+	model.enqueueChange( batch, writer => {
+		const headingRows = table.getAttribute( 'headingRows' ) || 0;
 
-	if ( first < headingRows ) {
-		const newRows = last < headingRows ? headingRows - ( last - first + 1 ) : first;
+		if ( first < headingRows ) {
+			const newRows = last < headingRows ? headingRows - ( last - first + 1 ) : first;
 
-		updateNumericAttribute( 'headingRows', newRows, table, writer, 0 );
-	}
+			updateNumericAttribute( 'headingRows', newRows, table, writer, 0 );
+		}
+	} );
 }
 
 // Finds cells that will be:
@@ -1158,14 +829,14 @@ function getCellsToMoveAndTrimOnRemoveRow( table, first, last ) {
 	const cellsToMove = new Map();
 	const cellsToTrim = [];
 
-	for ( const { row, column, cellHeight, cell } of new TableWalker( table, { endRow: last } ) ) {
-		const lastRowOfCell = row + cellHeight - 1;
+	for ( const { row, column, rowspan, cell } of new TableWalker( table, { endRow: last } ) ) {
+		const lastRowOfCell = row + rowspan - 1;
 
 		const isCellStickingOutFromRemovedRows = row >= first && row <= last && lastRowOfCell > last;
 
 		if ( isCellStickingOutFromRemovedRows ) {
 			const rowspanInRemovedSection = last - row + 1;
-			const rowSpanToSet = cellHeight - rowspanInRemovedSection;
+			const rowSpanToSet = rowspan - rowspanInRemovedSection;
 
 			cellsToMove.set( column, {
 				cell,
@@ -1189,7 +860,7 @@ function getCellsToMoveAndTrimOnRemoveRow( table, first, last ) {
 
 			cellsToTrim.push( {
 				cell,
-				rowspan: cellHeight - rowspanAdjustment
+				rowspan: rowspan - rowspanAdjustment
 			} );
 		}
 	}
@@ -1198,8 +869,9 @@ function getCellsToMoveAndTrimOnRemoveRow( table, first, last ) {
 
 function moveCellsToRow( table, targetRowIndex, cellsToMove, writer ) {
 	const tableWalker = new TableWalker( table, {
-		includeAllSlots: true,
-		row: targetRowIndex
+		includeSpanned: true,
+		startRow: targetRowIndex,
+		endRow: targetRowIndex
 	} );
 
 	const tableRowMap = [ ...tableWalker ];
@@ -1207,7 +879,7 @@ function moveCellsToRow( table, targetRowIndex, cellsToMove, writer ) {
 
 	let previousCell;
 
-	for ( const { column, cell, isAnchor } of tableRowMap ) {
+	for ( const { column, cell, isSpanned } of tableRowMap ) {
 		if ( cellsToMove.has( column ) ) {
 			const { cell: cellToMove, rowspan } = cellsToMove.get( column );
 
@@ -1219,37 +891,9 @@ function moveCellsToRow( table, targetRowIndex, cellsToMove, writer ) {
 			updateNumericAttribute( 'rowspan', rowspan, cellToMove, writer );
 
 			previousCell = cellToMove;
-		} else if ( isAnchor ) {
+		} else if ( !isSpanned ) {
 			// If cell is spanned then `cell` holds reference to overlapping cell. See ckeditor/ckeditor5#6502.
 			previousCell = cell;
 		}
 	}
-}
-
-function compareRangeOrder( rangeA, rangeB ) {
-	// Since table cell ranges are disjoint, it's enough to check their start positions.
-	const posA = rangeA.start;
-	const posB = rangeB.start;
-
-	// Checking for equal position (returning 0) is not needed because this would be either:
-	// a. Intersecting range (not allowed by model)
-	// b. Collapsed range on the same position (allowed by model but should not happen).
-	return posA.isBefore( posB ) ? -1 : 1;
-}
-
-// Calculates the area of a maximum rectangle that can span over the provided row & column indexes.
-//
-// @param {Array.<Number>} rows
-// @param {Array.<Number>} columns
-// @returns {Number}
-function getBiggestRectangleArea( rows, columns ) {
-	const rowsIndexes = Array.from( rows.values() );
-	const columnIndexes = Array.from( columns.values() );
-
-	const lastRow = Math.max( ...rowsIndexes );
-	const firstRow = Math.min( ...rowsIndexes );
-	const lastColumn = Math.max( ...columnIndexes );
-	const firstColumn = Math.min( ...columnIndexes );
-
-	return ( lastRow - firstRow + 1 ) * ( lastColumn - firstColumn + 1 );
 }

@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -10,6 +10,7 @@ import { getData as getModelData, parse, setData as setModelData } from '@ckedit
 import TableEditing from '../../src/tableediting';
 import { modelTable } from './../_utils/utils';
 import UndoEditing from '@ckeditor/ckeditor5-undo/src/undoediting';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 
 describe( 'Table layout post-fixer', () => {
 	let editor, model, root;
@@ -43,7 +44,7 @@ describe( 'Table layout post-fixer', () => {
 				writer.insert( parsed, root );
 			} );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelTable( [
 				[ '00', '', '' ],
 				[ '10', '11', '12' ],
 				[ '20', '21', '' ]
@@ -62,7 +63,7 @@ describe( 'Table layout post-fixer', () => {
 				writer.insert( parsed, root );
 			} );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelTable( [
 				[ '00', { rowspan: 2, contents: '10' }, '', '' ],
 				[ '10', { colspan: 2, contents: '12' } ],
 				[ '20', '21', '', '' ]
@@ -81,7 +82,7 @@ describe( 'Table layout post-fixer', () => {
 				writer.insert( parsed, root );
 			} );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelTable( [
 				[ { colspan: 6, contents: '00' } ],
 				[ { rowspan: 2, contents: '10' }, '11', { colspan: 3, contents: '12' }, '' ],
 				[ '21', '22', '', '', '' ]
@@ -101,7 +102,7 @@ describe( 'Table layout post-fixer', () => {
 				writer.insert( parsed, root );
 			} );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelTable( [
 				[ '00', '01', '' ],
 				[ '20', '21', '22' ]
 			] ) );
@@ -119,7 +120,7 @@ describe( 'Table layout post-fixer', () => {
 				writer.insert( parsed, root );
 			} );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelTable( [
 				[ { rowspan: 2, contents: '00' }, { rowspan: 2, contents: '01' }, '02' ],
 				[ '12' ],
 				[ '20', '21', '22' ]
@@ -138,7 +139,7 @@ describe( 'Table layout post-fixer', () => {
 				writer.insert( parsed, root );
 			} );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelTable( [
 				[ '00', '01', '02' ],
 				[ { rowspan: 2, contents: '10' }, { rowspan: 2, contents: '11' }, '12' ],
 				[ '22' ]
@@ -181,7 +182,7 @@ describe( 'Table layout post-fixer', () => {
 
 			const expectedTables = expectedTableA + expectedTableB + expectedTableC;
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( expectedTables );
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), expectedTables );
 		} );
 
 		it( 'should not crash on table remove', () => {
@@ -393,17 +394,17 @@ describe( 'Table layout post-fixer', () => {
 
 			model.change( localCallback );
 
-			model.enqueueChange( { isUndoable: false }, externalCallback );
+			model.enqueueChange( 'transparent', externalCallback );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelAfter );
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelAfter );
 
 			editor.execute( 'undo' );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelAfterUndo );
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelAfterUndo );
 
 			editor.execute( 'redo' );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelAfter );
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelAfter );
 		}
 
 		function _removeColumn( writer, columnIndex, rows ) {

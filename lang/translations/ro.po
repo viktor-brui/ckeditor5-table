@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+# Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
 #
 #                                     !!! IMPORTANT !!!
 #
@@ -38,7 +38,7 @@ msgstr "Șterge coloană"
 
 msgctxt "Label for the select the entire table column button."
 msgid "Select column"
-msgstr "Selectează coloana"
+msgstr ""
 
 msgctxt "Label for the table column dropdown button."
 msgid "Column"
@@ -62,7 +62,7 @@ msgstr "Șterge rând"
 
 msgctxt "Label for the select the entire table row button."
 msgid "Select row"
-msgstr "Selectează linia"
+msgstr ""
 
 msgctxt "Label for the table row dropdown button."
 msgid "Row"
@@ -102,160 +102,148 @@ msgstr "Bară tabel"
 
 msgctxt "The label describing the form allowing to specify the properties of a selected table."
 msgid "Table properties"
-msgstr "Proprietățile tabelei"
+msgstr ""
 
 msgctxt "The label describing the form allowing to specify the properties of a selected table cell."
 msgid "Cell properties"
-msgstr "Proprietățile celulei"
+msgstr ""
 
 msgctxt "The label describing a group of border–related form fields (border style, color, etc.)."
 msgid "Border"
-msgstr "Bordură"
+msgstr ""
 
 msgctxt "The label for the dropdown that allows configuring the border style of a table or a table cell."
 msgid "Style"
-msgstr "Stil"
+msgstr ""
 
 msgctxt "The label for the input that allows configuring the width of a table or a table cell or the width of a border."
 msgid "Width"
-msgstr "Lungime"
+msgstr ""
 
 msgctxt "The label for the input that allows configuring the height of a table or a table cell."
 msgid "Height"
-msgstr "Înălțime"
+msgstr ""
 
 msgctxt "The label for the input that allows configuring the border color of a table or a table cell."
 msgid "Color"
-msgstr "Culoare"
+msgstr ""
 
 msgctxt "The label for the input that allows configuring the background color of a table or a table cell."
 msgid "Background"
-msgstr "Fundal"
+msgstr ""
 
 msgctxt "The label for the input that allows configuring the padding of a table cell."
 msgid "Padding"
-msgstr "Spațiere"
+msgstr ""
 
 msgctxt "The label describing a group of form fields that allows setting dimensions of a table or a table cell."
 msgid "Dimensions"
-msgstr "Dimensiuni"
+msgstr ""
 
 msgctxt "The label for the group of toolbars that allows configuring the text alignment in a table cell."
 msgid "Table cell text alignment"
-msgstr "Alinierea textului celulei tabelei"
+msgstr ""
 
 msgctxt "The label for the toolbar that allows configuring the alignment of a table."
 msgid "Alignment"
-msgstr "Aliniere"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a toolbar that allows configuring the horizontal text alignment in a table cell."
 msgid "Horizontal text alignment toolbar"
-msgstr "Toolbar aliniere text orizontală"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a toolbar that allows configuring the vertical text alignment in a table cell."
 msgid "Vertical text alignment toolbar"
-msgstr "Toolbar aliniere text verticală"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a toolbar that allows configuring the alignment of a table."
 msgid "Table alignment toolbar"
-msgstr "Toolbar aliniere tabelă"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when no style is applied to a table or a table cell."
 msgid "None"
-msgstr "Nimic"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the solid border is applied to a table or a table cell."
 msgid "Solid"
-msgstr "Solidă"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the dotted border is applied to a table or a table cell."
 msgid "Dotted"
-msgstr "Punctată"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the dashed border is applied to a table or a table cell."
 msgid "Dashed"
-msgstr "Linii întrerupte"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the double border is applied to a table or a table cell."
 msgid "Double"
-msgstr "Dublă"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the groove border is applied to a table or a table cell."
 msgid "Groove"
-msgstr "Groove"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the ridge border is applied to a table or a table cell."
 msgid "Ridge"
-msgstr "Crestată"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the inset border is applied to a table or a table cell."
 msgid "Inset"
-msgstr "Inserează"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the outset border is applied to a table or a table cell."
 msgid "Outset"
-msgstr "Elimină"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table cell text to the left."
 msgid "Align cell text to the left"
-msgstr "Alinează textul celulei la stânga"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table cell text to the center."
 msgid "Align cell text to the center"
-msgstr "Alinează textul celulei la centru"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table cell text to the right."
 msgid "Align cell text to the right"
-msgstr "Alinează textul celulei la dreapta"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that justifies the table cell text."
 msgid "Justify cell text"
-msgstr "Textul celulei justify"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table cell text to the top."
 msgid "Align cell text to the top"
-msgstr "Alinează textul celulei sus"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table cell text to the middle."
 msgid "Align cell text to the middle"
-msgstr "Alinează textul celulei la mijloc"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table cell text to the bottom."
 msgid "Align cell text to the bottom"
-msgstr "Alinează textul celulei jos"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table to the left."
 msgid "Align table to the left"
-msgstr "Alinează tabela la stânga"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that centers the table."
 msgid "Center table"
-msgstr "Tabelă centrată"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that aligns the table to the right."
 msgid "Align table to the right"
-msgstr "Alinează tabela la dreapta"
+msgstr ""
 
 msgctxt "The localized error string that can be displayed next to color (background, border) fields that have an invalid value"
 msgid "The color is invalid. Try \"#FF0000\" or \"rgb(255,0,0)\" or \"red\"."
-msgstr "Culoarea este invalidă. Încearcă \"#FF0000\" sau \"rgb(255,0,0)\" sau \"red\"."
+msgstr ""
 
 msgctxt "The localized error string that can be displayed next to length (padding, border width) fields that have an invalid value."
 msgid "The value is invalid. Try \"10px\" or \"2em\" or simply \"2\"."
-msgstr "Valoarea este invalidă. Încearcă \"10px\" sau \"2em\" sau simplu \"2\"."
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a button that opens a color picker, where user can choose a configured color for a certain properties (eg.: background color, color, border-color etc.)."
 msgid "Color picker"
-msgstr "Alegere culoare"
-
-msgctxt "The button label for the table toolbar hiding caption attached to the table."
-msgid "Toggle caption off"
-msgstr "Dezactivați subtitlul"
-
-msgctxt "The button label for the table toolbar showing caption attached to the table."
-msgid "Toggle caption on"
-msgstr "Activați subtitlul"
-
-msgctxt "The placeholder text for the table caption displayed when the caption is empty."
-msgid "Enter table caption"
-msgstr "Adaugă subtitlul tabelei"
+msgstr ""

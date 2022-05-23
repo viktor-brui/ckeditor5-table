@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,9 +7,11 @@
  * @module table/commands/removecolumncommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
 
 import TableWalker from '../tablewalker';
+import { getColumnIndexes, getSelectionAffectedTableCells } from '../utils';
+import { findAncestor } from './utils';
 
 /**
  * The remove column command.
@@ -27,15 +29,14 @@ export default class RemoveColumnCommand extends Command {
 	 * @inheritDoc
 	 */
 	refresh() {
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const selectedCells = tableUtils.getSelectionAffectedTableCells( this.editor.model.document.selection );
+		const selectedCells = getSelectionAffectedTableCells( this.editor.model.document.selection );
 		const firstCell = selectedCells[ 0 ];
 
 		if ( firstCell ) {
-			const table = firstCell.findAncestor( 'table' );
-			const tableColumnCount = tableUtils.getColumns( table );
+			const table = findAncestor( 'table', firstCell );
+			const tableColumnCount = this.editor.plugins.get( 'TableUtils' ).getColumns( table );
 
-			const { first, last } = tableUtils.getColumnIndexes( selectedCells );
+			const { first, last } = getColumnIndexes( selectedCells );
 
 			this.isEnabled = last - first < ( tableColumnCount - 1 );
 		} else {
@@ -47,8 +48,7 @@ export default class RemoveColumnCommand extends Command {
 	 * @inheritDoc
 	 */
 	execute() {
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const [ firstCell, lastCell ] = getBoundaryCells( this.editor.model.document.selection, tableUtils );
+		const [ firstCell, lastCell ] = getBoundaryCells( this.editor.model.document.selection );
 		const table = firstCell.parent.parent;
 
 		// Cache the table before removing or updating colspans.
@@ -112,8 +112,8 @@ function getCellToFocus( tableMap, firstCell, lastCell, removedColumnIndexes ) {
 }
 
 // Returns helper object returning the first and the last cell contained in given selection, based on DOM order.
-function getBoundaryCells( selection, tableUtils ) {
-	const referenceCells = tableUtils.getSelectionAffectedTableCells( selection );
+function getBoundaryCells( selection ) {
+	const referenceCells = getSelectionAffectedTableCells( selection );
 	const firstCell = referenceCells[ 0 ];
 	const lastCell = referenceCells.pop();
 

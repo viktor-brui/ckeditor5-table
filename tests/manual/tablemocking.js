@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -14,10 +14,11 @@ import { diffString } from 'json-diff';
 import { debounce } from 'lodash-es';
 import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset';
 import TableWalker from '../../src/tablewalker';
+import { getSelectionAffectedTableCells } from '../../src/utils';
+import { findAncestor } from '../../src/commands/utils';
 
 ClassicEditor
 	.create( document.querySelector( '#editor' ), {
-		image: { toolbar: [ 'toggleImageCaption', 'imageTextAlternative' ] },
 		plugins: [ ArticlePluginSet ],
 		toolbar: [
 			'insertTable', 'undo', 'redo'
@@ -31,10 +32,6 @@ ClassicEditor
 
 		const asciiOut = document.getElementById( 'ascii-art' );
 		const modelData = document.getElementById( 'model-data' );
-
-		editor.editing.view.document.on( 'paste', ( evt, data ) => {
-			document.getElementById( 'clipboard' ).innerText = data.dataTransfer.getData( 'text/html' ).replace( />(?=<)/g, '>\n' );
-		} );
 
 		document.getElementById( 'clear-content' ).addEventListener( 'click', () => {
 			editor.setData( '' );
@@ -119,17 +116,16 @@ ClassicEditor
 
 		function findTable( editor, useAnyTable = false ) {
 			const selection = editor.model.document.selection;
-			const tableUtils = this.editor.plugins.get( 'TableUtils' );
 
-			const tableCells = tableUtils.getSelectionAffectedTableCells( selection );
+			const tableCells = getSelectionAffectedTableCells( selection );
 
 			if ( tableCells.length ) {
-				return tableCells[ 0 ].findAncestor( 'table' );
+				return findAncestor( 'table', tableCells[ 0 ] );
 			}
 
 			const element = selection.getSelectedElement();
 
-			if ( element && element.is( 'element', 'table' ) ) {
+			if ( element && element.is( 'table' ) ) {
 				return element;
 			}
 
@@ -137,7 +133,7 @@ ClassicEditor
 				const range = editor.model.createRangeIn( editor.model.document.getRoot() );
 
 				for ( const element of range.getItems() ) {
-					if ( element.is( 'element', 'table' ) ) {
+					if ( element.is( 'table' ) ) {
 						return element;
 					}
 				}
@@ -151,7 +147,7 @@ ClassicEditor
 			const tables = [];
 
 			for ( const element of range.getItems() ) {
-				if ( element.is( 'element', 'table' ) ) {
+				if ( element.is( 'table' ) ) {
 					tables.push( element );
 				}
 			}

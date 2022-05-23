@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,8 +7,8 @@
  * @module table/tableproperties/commands/tableborderwidthcommand
  */
 
+import { addDefaultUnitToNumericValue, getSingleValue } from '../../commands/utils';
 import TablePropertyCommand from './tablepropertycommand';
-import { addDefaultUnitToNumericValue, getSingleValue } from '../../utils/table-properties';
 
 /**
  * The table width border command.
@@ -37,10 +37,9 @@ export default class TableBorderWidthCommand extends TablePropertyCommand {
 	 * Creates a new `TableBorderWidthCommand` instance.
 	 *
 	 * @param {module:core/editor/editor~Editor} editor An editor in which this command will be used.
-	 * @param {String} defaultValue The default value of the attribute.
 	 */
-	constructor( editor, defaultValue ) {
-		super( editor, 'tableBorderWidth', defaultValue );
+	constructor( editor ) {
+		super( editor, 'borderWidth' );
 	}
 
 	/**
@@ -51,25 +50,13 @@ export default class TableBorderWidthCommand extends TablePropertyCommand {
 			return;
 		}
 
-		const value = getSingleValue( table.getAttribute( this.attributeName ) );
-
-		if ( value === this._defaultValue ) {
-			return;
-		}
-
-		return value;
+		return getSingleValue( table.getAttribute( this.attributeName ) );
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	_getValueToSet( value ) {
-		value = addDefaultUnitToNumericValue( value, 'px' );
-
-		if ( value === this._defaultValue ) {
-			return;
-		}
-
-		return value;
+		return addDefaultUnitToNumericValue( value, 'px' );
 	}
 }

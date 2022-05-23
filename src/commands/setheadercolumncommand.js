@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,13 +7,10 @@
  * @module table/commands/setheadercolumncommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
 
-import {
-	isHeadingColumnCell,
-	updateNumericAttribute
-} from '../utils/common';
-import { getHorizontallyOverlappingCells, splitVertically } from '../utils/structure';
+import { findAncestor, isHeadingColumnCell, updateNumericAttribute } from './utils';
+import { getColumnIndexes, getSelectionAffectedTableCells, getHorizontallyOverlappingCells, splitVertically } from '../utils';
 
 /**
  * The header column command.
@@ -36,9 +33,8 @@ export default class SetHeaderColumnCommand extends Command {
 	 */
 	refresh() {
 		const model = this.editor.model;
+		const selectedCells = getSelectionAffectedTableCells( model.document.selection );
 		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-
-		const selectedCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
 		const isInTable = selectedCells.length > 0;
 
 		this.isEnabled = isInTable;
@@ -71,12 +67,11 @@ export default class SetHeaderColumnCommand extends Command {
 			return;
 		}
 
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
 		const model = this.editor.model;
-		const selectedCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
-		const table = selectedCells[ 0 ].findAncestor( 'table' );
+		const selectedCells = getSelectionAffectedTableCells( model.document.selection );
+		const table = findAncestor( 'table', selectedCells[ 0 ] );
 
-		const { first, last } = tableUtils.getColumnIndexes( selectedCells );
+		const { first, last } = getColumnIndexes( selectedCells );
 		const headingColumnsToSet = this.value ? first : last + 1;
 
 		model.change( writer => {

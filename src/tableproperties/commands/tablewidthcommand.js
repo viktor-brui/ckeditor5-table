@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,8 +7,8 @@
  * @module table/tableproperties/commands/tablewidthcommand
  */
 
+import { addDefaultUnitToNumericValue } from '../../commands/utils';
 import TablePropertyCommand from './tablepropertycommand';
-import { addDefaultUnitToNumericValue } from '../../utils/table-properties';
 
 /**
  * The table width command.
@@ -37,22 +37,15 @@ export default class TableWidthCommand extends TablePropertyCommand {
 	 * Creates a new `TableWidthCommand` instance.
 	 *
 	 * @param {module:core/editor/editor~Editor} editor An editor in which this command will be used.
-	 * @param {String} defaultValue The default value of the attribute.
 	 */
-	constructor( editor, defaultValue ) {
-		super( editor, 'tableWidth', defaultValue );
+	constructor( editor ) {
+		super( editor, 'width' );
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	_getValueToSet( value ) {
-		value = addDefaultUnitToNumericValue( value, 'px' );
-
-		if ( value === this._defaultValue ) {
-			return;
-		}
-
-		return value;
+		return addDefaultUnitToNumericValue( value, 'px' );
 	}
 }

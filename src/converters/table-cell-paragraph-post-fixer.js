@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -70,9 +70,7 @@ function fixTable( table, writer ) {
 	let wasFixed = false;
 
 	for ( const row of table.getChildren() ) {
-		if ( row.is( 'element', 'tableRow' ) ) {
-			wasFixed = fixTableRow( row, writer ) || wasFixed;
-		}
+		wasFixed = fixTableRow( row, writer ) || wasFixed;
 	}
 
 	return wasFixed;
@@ -111,7 +109,7 @@ function fixTableCellContent( tableCell, writer ) {
 
 	// Check table cell children for directly placed text nodes.
 	// Temporary solution. See https://github.com/ckeditor/ckeditor5/issues/1464.
-	const textNodes = Array.from( tableCell.getChildren() ).filter( child => child.is( '$text' ) );
+	const textNodes = Array.from( tableCell.getChildren() ).filter( child => child.is( 'text' ) );
 
 	// @if CK_DEBUG_TABLE // textNodes.length && console.log( 'Post-fixing table: wrap cell content with paragraph.' );
 
@@ -130,7 +128,7 @@ function fixTableCellContent( tableCell, writer ) {
 // @param {Object} differ change entry
 // @returns {Boolean}
 function checkTableCellChange( entry ) {
-	if ( !entry.position || !entry.position.parent.is( 'element', 'tableCell' ) ) {
+	if ( !entry.position || !entry.position.parent.is( 'tableCell' ) ) {
 		return false;
 	}
 

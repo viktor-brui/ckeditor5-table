@@ -1,17 +1,16 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
 import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
 
-import TableEditing from '../../src/tableediting';
-import TableSelection from '../../src/tableselection';
-import { modelTable } from '../_utils/utils';
-
 import RemoveColumnCommand from '../../src/commands/removecolumncommand';
+import TableSelection from '../../src/tableselection';
+import { defaultConversion, defaultSchema, modelTable } from '../_utils/utils';
+import TableUtils from '../../src/tableutils';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 
 describe( 'RemoveColumnCommand', () => {
 	let editor, model, command;
@@ -19,12 +18,15 @@ describe( 'RemoveColumnCommand', () => {
 	beforeEach( () => {
 		return ModelTestEditor
 			.create( {
-				plugins: [ Paragraph, TableEditing, TableSelection ]
+				plugins: [ TableUtils, TableSelection ]
 			} )
 			.then( newEditor => {
 				editor = newEditor;
 				model = editor.model;
 				command = new RemoveColumnCommand( editor );
+
+				defaultSchema( model.schema );
+				defaultConversion( editor.conversion );
 			} );
 	} );
 
@@ -116,7 +118,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '00', '02' ],
 				[ '10', '[]12' ],
 				[ '20', '22' ]
@@ -132,7 +134,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]01' ],
 				[ '11' ],
 				[ '21' ]
@@ -157,7 +159,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '01' ],
 					[ '11' ],
 					[ '[]21' ],
@@ -182,7 +184,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '02' ],
 					[ '10', '12' ],
 					[ '20', '[]22' ],
@@ -207,7 +209,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00' ],
 					[ '[]10' ],
 					[ '20' ],
@@ -232,7 +234,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '02' ],
 					[ '[]12' ],
 					[ '22' ],
@@ -257,7 +259,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '03' ],
 					[ '10', '13' ],
 					[ '20', '[]23' ],
@@ -282,7 +284,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '03' ],
 					[ '10', '13' ],
 					[ '20', '[]23' ],
@@ -308,7 +310,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00' ],
 					[ '[]10' ],
 					[ '20' ],
@@ -332,7 +334,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '04' ],
 					[ '10', '[]14' ]
 				], { headingColumns: 1 } ) );
@@ -354,7 +356,7 @@ describe( 'RemoveColumnCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00' ],
 					[ '[]12' ],
 					[ '22' ]
@@ -371,7 +373,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '01' ],
 				[ '[]11' ],
 				[ '21' ]
@@ -389,7 +391,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ { colspan: 3, contents: '00' }, '04' ],
 				[ { colspan: 2, contents: '10' }, '13', '14' ],
 				[ { colspan: 2, contents: '20' }, '[]23', '24' ],
@@ -408,7 +410,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ { colspan: 2, contents: '[]00' }, '03' ],
 				[ '10', '12', '13' ],
 				[ '21', '22', '23' ]
@@ -424,7 +426,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '00', '01' ],
 				[ '10', '[]11' ],
 				[ '20', '21' ]
@@ -439,7 +441,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]00' ]
 			] ) );
 		} );
@@ -452,7 +454,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]00' ]
 			] ) );
 		} );
@@ -465,7 +467,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]01' ],
 				[ '11' ]
 			] ) );
@@ -479,7 +481,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]01' ]
 			] ) );
 		} );
@@ -492,7 +494,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]01' ]
 			] ) );
 		} );
@@ -505,7 +507,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]00' ],
 				[ '10' ]
 			] ) );
@@ -520,7 +522,7 @@ describe( 'RemoveColumnCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getData( model ), modelTable( [
 				[ '[]01', '02' ],
 				[ '21', '22' ]
 			] ) );

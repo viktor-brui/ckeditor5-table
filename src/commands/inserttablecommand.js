@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,7 +7,8 @@
  * @module table/commands/inserttablecommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
+import { findOptimalInsertionPosition } from '@ckeditor/ckeditor5-widget/src/utils';
 
 /**
  * The insert table command.
@@ -29,7 +30,9 @@ export default class InsertTableCommand extends Command {
 		const selection = model.document.selection;
 		const schema = model.schema;
 
-		this.isEnabled = isAllowedInParent( selection, schema );
+		const validParent = getInsertTableParent( selection.getFirstPosition() );
+
+		this.isEnabled = schema.checkChild( validParent, 'table' );
 	}
 
 	/**
@@ -40,48 +43,33 @@ export default class InsertTableCommand extends Command {
 	 * @param {Object} options
 	 * @param {Number} [options.rows=2] The number of rows to create in the inserted table.
 	 * @param {Number} [options.columns=2] The number of columns to create in the inserted table.
-	 * @param {Number} [options.headingRows] The number of heading rows.
-	 * If not provided it will default to {@link module:table/table~TableConfig#defaultHeadings `config.table.defaultHeadings.rows`}
-	 * table config.
-	 * @param {Number} [options.headingColumns] The number of heading columns.
-	 * If not provided it will default to {@link module:table/table~TableConfig#defaultHeadings `config.table.defaultHeadings.columns`}
-	 * table config.
 	 * @fires execute
 	 */
 	execute( options = {} ) {
 		const model = this.editor.model;
+		const selection = model.document.selection;
 		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const config = this.editor.config.get( 'table' );
 
-		const defaultRows = config.defaultHeadings.rows;
-		const defaultColumns = config.defaultHeadings.columns;
+		const rows = parseInt( options.rows ) || 2;
+		const columns = parseInt( options.columns ) || 2;
 
-		if ( options.headingRows === undefined && defaultRows ) {
-			options.headingRows = defaultRows;
-		}
-
-		if ( options.headingColumns === undefined && defaultColumns ) {
-			options.headingColumns = defaultColumns;
-		}
+		const insertPosition = findOptimalInsertionPosition( selection, model );
 
 		model.change( writer => {
-			const table = tableUtils.createTable( writer, options );
+			const table = tableUtils.createTable( writer, rows, columns );
 
-			model.insertObject( table, null, null, { findOptimalPosition: 'auto' } );
+			model.insertContent( table, insertPosition );
 
 			writer.setSelection( writer.createPositionAt( table.getNodeByPath( [ 0, 0, 0 ] ), 0 ) );
 		} );
 	}
 }
 
-// Checks if the table is allowed in the parent.
+// Returns valid parent to insert table
 //
-// @param {module:engine/model/selection~Selection|module:engine/model/documentselection~DocumentSelection} selection
-// @param {module:engine/model/schema~Schema} schema
-// @returns {Boolean}
-function isAllowedInParent( selection, schema ) {
-	const positionParent = selection.getFirstPosition().parent;
-	const validParent = positionParent === positionParent.root ? positionParent : positionParent.parent;
+// @param {module:engine/model/position} position
+function getInsertTableParent( position ) {
+	const parent = position.parent;
 
-	return schema.checkChild( validParent, 'table' );
+	return parent === parent.root ? parent : parent.parent;
 }

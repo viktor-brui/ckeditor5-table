@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -8,10 +8,10 @@ import Widget from '@ckeditor/ckeditor5-widget/src/widget';
 import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
 import Clipboard from '@ckeditor/ckeditor5-clipboard/src/clipboard';
 import UndoEditing from '@ckeditor/ckeditor5-undo/src/undoediting';
-import ListEditing from '@ckeditor/ckeditor5-list/src/list/listediting';
+import ListEditing from '@ckeditor/ckeditor5-list/src/listediting';
 import BlockQuoteEditing from '@ckeditor/ckeditor5-block-quote/src/blockquoteediting';
 import Typing from '@ckeditor/ckeditor5-typing/src/typing';
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor';
+import VirtualTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor';
 import {
 	getData as getModelData,
 	setData as setModelData
@@ -20,22 +20,19 @@ import { parse as parseView } from '@ckeditor/ckeditor5-engine/src/dev-utils/vie
 
 import TableEditing from '../src/tableediting';
 import { modelTable, viewTable } from './_utils/utils';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 
 describe( 'Table feature – integration', () => {
 	describe( 'with clipboard', () => {
 		let editor, clipboard;
 
 		beforeEach( () => {
-			return ClassicTestEditor
-				.create( '', { plugins: [ Paragraph, TableEditing, ListEditing, BlockQuoteEditing, Widget, Clipboard ] } )
+			return VirtualTestEditor
+				.create( { plugins: [ Paragraph, TableEditing, ListEditing, BlockQuoteEditing, Widget, Clipboard ] } )
 				.then( newEditor => {
 					editor = newEditor;
-					clipboard = editor.plugins.get( 'ClipboardPipeline' );
+					clipboard = editor.plugins.get( 'Clipboard' );
 				} );
-		} );
-
-		afterEach( () => {
-			editor.destroy();
 		} );
 
 		it( 'pastes td as p when pasting into the table', () => {
@@ -45,7 +42,7 @@ describe( 'Table feature – integration', () => {
 				content: parseView( '<td>bar</td>' )
 			} );
 
-			expect( getModelData( editor.model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( editor.model ), modelTable( [
 				[ 'foobar[]' ]
 			] ) );
 		} );
@@ -57,7 +54,7 @@ describe( 'Table feature – integration', () => {
 				content: parseView( '<td>bar</td>' )
 			} );
 
-			expect( getModelData( editor.model ) ).to.equalMarkup( '<paragraph>foobar[]</paragraph>' );
+			assertEqualMarkup( getModelData( editor.model ), '<paragraph>foobar[]</paragraph>' );
 		} );
 
 		it( 'pastes list into the td', () => {
@@ -67,7 +64,7 @@ describe( 'Table feature – integration', () => {
 				content: parseView( '<li>bar</li>' )
 			} );
 
-			expect( getModelData( editor.model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( editor.model ), modelTable( [
 				[ '<listItem listIndent="0" listType="bulleted">bar[]</listItem>' ]
 			] ) );
 		} );
@@ -79,7 +76,7 @@ describe( 'Table feature – integration', () => {
 				content: parseView( '<blockquote>bar</blockquote>' )
 			} );
 
-			expect( getModelData( editor.model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( editor.model ), modelTable( [
 				[ '<blockQuote><paragraph>bar[]</paragraph></blockQuote>' ]
 			] ) );
 		} );
@@ -89,17 +86,13 @@ describe( 'Table feature – integration', () => {
 		let editor, doc, root;
 
 		beforeEach( () => {
-			return ClassicTestEditor
-				.create( '', { plugins: [ Paragraph, TableEditing, Widget, UndoEditing ] } )
+			return VirtualTestEditor
+				.create( { plugins: [ Paragraph, TableEditing, Widget, UndoEditing ] } )
 				.then( newEditor => {
 					editor = newEditor;
 					doc = editor.model.document;
 					root = doc.getRoot();
 				} );
-		} );
-
-		afterEach( () => {
-			editor.destroy();
 		} );
 
 		it( 'fixing empty roots should be transparent to undo', () => {
@@ -162,15 +155,11 @@ describe( 'Table feature – integration', () => {
 		let editor;
 
 		beforeEach( () => {
-			return ClassicTestEditor
-				.create( '', { plugins: [ Paragraph, TableEditing, ListEditing, BlockQuoteEditing, Widget, Typing ] } )
+			return VirtualTestEditor
+				.create( { plugins: [ Paragraph, TableEditing, ListEditing, BlockQuoteEditing, Widget, Typing ] } )
 				.then( newEditor => {
 					editor = newEditor;
 				} );
-		} );
-
-		afterEach( () => {
-			editor.destroy();
 		} );
 
 		it( 'merges elements without throwing errors', () => {
@@ -180,105 +169,9 @@ describe( 'Table feature – integration', () => {
 
 			editor.execute( 'delete' );
 
-			expect( getModelData( editor.model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( editor.model ), modelTable( [
 				[ '<blockQuote><paragraph>Foo[]Bar</paragraph></blockQuote>' ]
 			] ) );
-		} );
-
-		it( 'should not make the Model#hasContent() method return "true" when an empty table cell is selected', () => {
-			setModelData( editor.model, (
-				'<table>' +
-					'<tableRow>' +
-						'[<tableCell><paragraph></paragraph></tableCell>]' +
-					'</tableRow>' +
-				'</table>'
-			) );
-
-			expect( editor.model.hasContent( editor.model.document.selection.getFirstRange() ) ).to.be.false;
-		} );
-	} );
-} );
-
-describe( 'Table feature – integration with markers', () => {
-	let editor;
-
-	afterEach( () => {
-		editor.destroy();
-	} );
-
-	// https://github.com/ckeditor/ckeditor5/pull/9780
-	it( 'should work with the upcast marker to data conversion with table containing an empty cell', async () => {
-		function CustomPlugin( editor ) {
-			// Define the conversion in a plugin as this needs to be loaded before the Table plugin.
-			editor.conversion.for( 'upcast' ).dataToMarker( {
-				view: 'foo'
-			} );
-		}
-
-		editor = await ClassicTestEditor
-			.create( '', { plugins: [ CustomPlugin, Paragraph, TableEditing ] } );
-
-		editor.setData( '<table><tbody><tr><td></td></tr></tbody></table>' );
-
-		expect( getModelData( editor.model, { withoutSelection: true } ) )
-			.to.equal( '<table><tableRow><tableCell><paragraph></paragraph></tableCell></tableRow></table>' );
-	} );
-
-	// https://github.com/ckeditor/ckeditor5/issues/10116
-	describe( 'markers converted to UI elements and vice versa', () => {
-		function CustomPlugin( editor ) {
-			editor.conversion.for( 'upcast' ).elementToMarker( { view: 'foo', model: 'bar' } );
-			editor.conversion.for( 'dataDowncast' ).markerToElement( { view: 'foo', model: 'bar' } );
-		}
-
-		beforeEach( async () => {
-			editor = await ClassicTestEditor.create( '', { plugins: [ CustomPlugin, Paragraph, TableEditing ] } );
-		} );
-
-		it( 'should not throw if marker is inside an empty table cell', async () => {
-			editor.setData( '<table><tr><td><foo></foo></td></tr></table>' );
-
-			expect( () => editor.getData() ).to.not.throw();
-		} );
-
-		it( 'should adjust the model position mapping - table cell containing marker only', async () => {
-			editor.setData( '<table><tr><td><foo></foo></td></tr></table>' );
-
-			expect( editor.getData() ).to.equal(
-				'<figure class="table"><table><tbody><tr><td><foo></foo>&nbsp;</td></tr></tbody></table></figure>'
-			);
-		} );
-
-		it( 'should adjust the model position mapping - table cell containing marker preceded by an empty paragraph', async () => {
-			editor.setData( '<table><tr><td><p></p><foo></foo></td></tr></table>' );
-
-			expect( editor.getData() ).to.equal(
-				'<figure class="table"><table><tbody><tr><td><foo></foo>&nbsp;</td></tr></tbody></table></figure>'
-			);
-		} );
-
-		it( 'should adjust the model position mapping - table cell containing marker followed by an empty paragraph', async () => {
-			editor.setData( '<table><tr><td><foo></foo><p></p></td></tr></table>' );
-
-			expect( editor.getData() ).to.equal(
-				'<figure class="table"><table><tbody><tr><td><foo></foo>&nbsp;</td></tr></tbody></table></figure>'
-			);
-		} );
-
-		it( 'should adjust the model position mapping - table cell containing marker preceded by a non-empty paragraph', async () => {
-			editor.setData( '<table><tr><td><p>foobar</p><foo></foo></td></tr></table>' );
-
-			expect( editor.getData() ).to.equal(
-				'<figure class="table"><table><tbody><tr><td>foobar<foo></foo></td></tr></tbody></table></figure>'
-			);
-		} );
-
-		it( 'should adjust the model position mapping - table cell containing marker followed by a non-empty paragraph', async () => {
-			editor.setData( '<table><tr><td><foo></foo><p>foobar</p></td></tr></table>' );
-
-			expect( editor.getData() ).to.equal(
-				'<figure class="table"><table><tbody><tr><td><foo></foo>foobar</td></tr></tbody></table></figure>'
-			);
 		} );
 	} );
 } );

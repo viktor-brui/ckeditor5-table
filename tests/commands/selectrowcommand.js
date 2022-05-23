@@ -1,40 +1,34 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 import VirtualTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
 import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
 
-import TableEditing from '../../src/tableediting';
-import TableSelection from '../../src/tableselection';
-import { assertSelectedCells, modelTable } from '../_utils/utils';
-
 import SelectRowCommand from '../../src/commands/selectrowcommand';
+import TableSelection from '../../src/tableselection';
+import { assertSelectedCells, defaultConversion, defaultSchema, modelTable } from '../_utils/utils';
 
 describe( 'SelectRowCommand', () => {
 	let editor, model, modelRoot, command, tableSelection;
 
 	beforeEach( () => {
-		return VirtualTestEditor.create( { plugins: [ Paragraph, TableEditing, TableSelection ] } )
+		return VirtualTestEditor.create( { plugins: [ TableSelection ] } )
 			.then( newEditor => {
 				editor = newEditor;
 				model = editor.model;
 				modelRoot = model.document.getRoot();
 				command = new SelectRowCommand( editor );
 				tableSelection = editor.plugins.get( TableSelection );
+
+				defaultSchema( model.schema );
+				defaultConversion( editor.conversion );
 			} );
 	} );
 
 	afterEach( () => {
 		return editor.destroy();
-	} );
-
-	describe( 'constructor()', () => {
-		it( 'sets public properties', () => {
-			expect( command ).to.have.property( 'affectsData', false );
-		} );
 	} );
 
 	describe( 'isEnabled', () => {
@@ -58,16 +52,6 @@ describe( 'SelectRowCommand', () => {
 				modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
 				modelRoot.getNodeByPath( [ 0, 0, 1 ] )
 			);
-
-			expect( command.isEnabled ).to.be.true;
-		} );
-
-		it( 'should be true if the selection is inside the table and the editor is read-only', () => {
-			setData( model, modelTable( [
-				[ '00[]' ]
-			] ) );
-
-			editor.enableReadOnlyMode( 'unit-test' );
 
 			expect( command.isEnabled ).to.be.true;
 		} );

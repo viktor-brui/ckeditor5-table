@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,7 +7,9 @@
  * @module table/commands/insertcolumncommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
+import { findAncestor } from './utils';
+import { getColumnIndexes, getSelectionAffectedTableCells } from '../utils';
 
 /**
  * The insert column command.
@@ -51,10 +53,10 @@ export default class InsertColumnCommand extends Command {
 	 */
 	refresh() {
 		const selection = this.editor.model.document.selection;
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const isAnyCellSelected = !!tableUtils.getSelectionAffectedTableCells( selection ).length;
 
-		this.isEnabled = isAnyCellSelected;
+		const tableParent = findAncestor( 'table', selection.getFirstPosition() );
+
+		this.isEnabled = !!tableParent;
 	}
 
 	/**
@@ -71,11 +73,11 @@ export default class InsertColumnCommand extends Command {
 		const tableUtils = editor.plugins.get( 'TableUtils' );
 		const insertBefore = this.order === 'left';
 
-		const affectedTableCells = tableUtils.getSelectionAffectedTableCells( selection );
-		const columnIndexes = tableUtils.getColumnIndexes( affectedTableCells );
+		const affectedTableCells = getSelectionAffectedTableCells( selection );
+		const columnIndexes = getColumnIndexes( affectedTableCells );
 
 		const column = insertBefore ? columnIndexes.first : columnIndexes.last;
-		const table = affectedTableCells[ 0 ].findAncestor( 'table' );
+		const table = findAncestor( 'table', affectedTableCells[ 0 ] );
 
 		tableUtils.insertColumns( table, { columns: 1, at: insertBefore ? column : column + 1 } );
 	}

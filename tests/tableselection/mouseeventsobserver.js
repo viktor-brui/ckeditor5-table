@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* globals document */
 
 import View from '@ckeditor/ckeditor5-engine/src/view/view';
-import MouseEventsObserver from '../../src/tablemouse/mouseeventsobserver';
+import MouseEventsObserver from '../../src/tableselection/mouseeventsobserver';
 
 describe( 'table selection', () => {
 	describe( 'MouseEventsObserver', () => {
@@ -25,12 +25,13 @@ describe( 'table selection', () => {
 		it( 'should define domEventTypes', () => {
 			expect( observer.domEventType ).to.deep.equal( [
 				'mousemove',
+				'mouseup',
 				'mouseleave'
 			] );
 		} );
 
 		describe( 'onDomEvent', () => {
-			for ( const eventName of [ 'mousemove', 'mouseleave' ] ) {
+			for ( const eventName of [ 'mousemove', 'mouseup', 'mouseleave' ] ) {
 				it( `should fire ${ eventName } with the right event data`, () => {
 					const spy = sinon.spy();
 

@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -9,6 +9,7 @@ import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictest
 import Clipboard from '@ckeditor/ckeditor5-clipboard/src/clipboard';
 import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
 import { getData as getModelData, setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 import { modelTable, viewTable } from './_utils/utils';
 
 import TableEditing from '../src/tableediting';
@@ -190,32 +191,6 @@ describe( 'table clipboard', () => {
 			] ) );
 		} );
 
-		it( 'should output empty tr elements if needed by row-spanned cells', () => {
-			// +----+----+----+
-			// | 00 | 01 | 02 |
-			// +----+----+----+
-			// | 10 | 11 | 12 |
-			// +    +    +----+
-			// |    |    | 22 |
-			// +----+----+----+
-			setModelData( model, modelTable( [
-				[ '00', '01', '02' ],
-				[ { contents: '10', rowspan: 2 }, { contents: '11', rowspan: 2 }, '12' ],
-				[ '22' ]
-			] ) );
-
-			tableSelection.setCellSelection(
-				modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
-				modelRoot.getNodeByPath( [ 0, 1, 1 ] )
-			);
-
-			assertClipboardContentOnMethod( 'copy', viewTable( [
-				[ '00', '01' ],
-				[ { contents: '10', rowspan: 2 }, { contents: '11', rowspan: 2 } ],
-				[] // The empty tr
-			] ) );
-		} );
-
 		it( 'should fix selected table to a selection rectangle (hardcore case)', () => {
 			// This test check how previous simple rules run together (mixed prepending and trimming).
 			// In the example below a selection is set from cell "21" to "77"
@@ -286,8 +261,8 @@ describe( 'table clipboard', () => {
 			assertClipboardContentOnMethod( 'copy', viewTable( [
 				[ '11', '12', '13' ],
 				[ '21', '22', '23' ],
-				[ { contents: '31', isHeading: true }, '32', '33' ]
-			], { headingRows: 2 } ) );
+				[ { contents: '31', isHeading: true }, '32', '33' ] // TODO: bug in viewTable
+			], { headingRows: 2, headingColumns: 1 } ) );
 		} );
 
 		it( 'should update table heading attributes (selection without headings)', () => {
@@ -342,7 +317,7 @@ describe( 'table clipboard', () => {
 				preventDefault: sinon.spy()
 			} );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ { contents: '00', isSelected: true }, { contents: '01', isSelected: true }, '02' ],
 				[ { contents: '10', isSelected: true }, { contents: '11', isSelected: true }, '12' ],
 				[ '20', '21', '22' ]
@@ -364,7 +339,7 @@ describe( 'table clipboard', () => {
 				preventDefault: sinon.spy()
 			} );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ '', '', '02' ],
 				[ '', '[]', '12' ],
 				[ '20', '21', '22' ]
@@ -395,7 +370,7 @@ describe( 'table clipboard', () => {
 		it( 'should be disabled in a readonly mode', () => {
 			const preventDefaultStub = sinon.stub();
 
-			editor.enableReadOnlyMode( 'unit-test' );
+			editor.isReadOnly = true;
 
 			tableSelection.setCellSelection(
 				modelRoot.getNodeByPath( [ 0, 0, 1 ] ),
@@ -408,10 +383,10 @@ describe( 'table clipboard', () => {
 			};
 			viewDocument.fire( 'cut', data );
 
-			editor.disableReadOnlyMode( 'unit-test' );
+			editor.isReadOnly = false;
 
 			expect( data.dataTransfer.getData( 'text/html' ) ).to.be.undefined;
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model, { withoutSelection: true } ), modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ],
 				[ '20', '21', '22' ]

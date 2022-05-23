@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,7 +7,9 @@
  * @module table/tableproperties/commands/tablepropertycommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
+
+import { findAncestor } from '../../commands/utils';
 
 /**
  * The table cell attribute command.
@@ -22,27 +24,11 @@ export default class TablePropertyCommand extends Command {
 	 *
 	 * @param {module:core/editor/editor~Editor} editor An editor in which this command will be used.
 	 * @param {String} attributeName Table cell attribute name.
-	 * @param {String} defaultValue The default value of the attribute.
 	 */
-	constructor( editor, attributeName, defaultValue ) {
+	constructor( editor, attributeName ) {
 		super( editor );
 
-		/**
-		 * The attribute that will be set by the command.
-		 *
-		 * @readonly
-		 * @member {String}
-		 */
 		this.attributeName = attributeName;
-
-		/**
-		 * The default value for the attribute.
-		 *
-		 * @readonly
-		 * @protected
-		 * @member {String}
-		 */
-		this._defaultValue = defaultValue;
 	}
 
 	/**
@@ -52,7 +38,7 @@ export default class TablePropertyCommand extends Command {
 		const editor = this.editor;
 		const selection = editor.model.document.selection;
 
-		const table = selection.getFirstPosition().findAncestor( 'table' );
+		const table = findAncestor( 'table', selection.getFirstPosition() );
 
 		this.isEnabled = !!table;
 		this.value = this._getValue( table );
@@ -74,10 +60,10 @@ export default class TablePropertyCommand extends Command {
 
 		const { value, batch } = options;
 
-		const table = selection.getFirstPosition().findAncestor( 'table' );
+		const table = findAncestor( 'table', selection.getFirstPosition() );
 		const valueToSet = this._getValueToSet( value );
 
-		model.enqueueChange( batch, writer => {
+		model.enqueueChange( batch || 'default', writer => {
 			if ( valueToSet ) {
 				writer.setAttribute( this.attributeName, valueToSet, table );
 			} else {
@@ -98,13 +84,7 @@ export default class TablePropertyCommand extends Command {
 			return;
 		}
 
-		const value = table.getAttribute( this.attributeName );
-
-		if ( value === this._defaultValue ) {
-			return;
-		}
-
-		return value;
+		return table.getAttribute( this.attributeName );
 	}
 
 	/**
@@ -115,10 +95,6 @@ export default class TablePropertyCommand extends Command {
 	 * @returns {*}
 	 */
 	_getValueToSet( value ) {
-		if ( value === this._defaultValue ) {
-			return;
-		}
-
 		return value;
 	}
 }

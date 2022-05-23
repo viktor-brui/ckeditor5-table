@@ -22,3 +22,5 @@ setModelData( model, modelTable( [
     [ '40', '41', '42', '43', '44' ]
 ] ) );
 ```
+
+**Note:** Cell content is ignored while generating ASCII-art and `modelTableData`.  

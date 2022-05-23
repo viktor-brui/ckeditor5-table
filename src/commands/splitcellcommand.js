@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,7 +7,8 @@
  * @module table/commands/splitcellcommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
+import { getSelectionAffectedTableCells } from '../utils';
 
 /**
  * The split cell command.
@@ -45,8 +46,7 @@ export default class SplitCellCommand extends Command {
 	 * @inheritDoc
 	 */
 	refresh() {
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const selectedCells = tableUtils.getSelectionAffectedTableCells( this.editor.model.document.selection );
+		const selectedCells = getSelectionAffectedTableCells( this.editor.model.document.selection );
 
 		this.isEnabled = selectedCells.length === 1;
 	}
@@ -55,9 +55,9 @@ export default class SplitCellCommand extends Command {
 	 * @inheritDoc
 	 */
 	execute() {
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const tableCell = tableUtils.getSelectionAffectedTableCells( this.editor.model.document.selection )[ 0 ];
+		const tableCell = getSelectionAffectedTableCells( this.editor.model.document.selection )[ 0 ];
 		const isHorizontal = this.direction === 'horizontally';
+		const tableUtils = this.editor.plugins.get( 'TableUtils' );
 
 		if ( isHorizontal ) {
 			tableUtils.splitCellHorizontally( tableCell, 2 );

@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,22 +7,23 @@
  * @module table/tableclipboard
  */
 
-import { Plugin } from 'ckeditor5/src/core';
+import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
 
 import TableSelection from './tableselection';
 import TableWalker from './tablewalker';
-import TableUtils from './tableutils';
 import {
-	cropTableToDimensions,
-	getHorizontallyOverlappingCells,
+	getColumnIndexes,
 	getVerticallyOverlappingCells,
-	removeEmptyRowsColumns,
+	getRowIndexes,
+	getSelectionAffectedTableCells,
+	getHorizontallyOverlappingCells,
+	isSelectionRectangular,
 	splitHorizontally,
-	splitVertically,
-	trimTableCellIfNeeded,
-	adjustLastRowIndex,
-	adjustLastColumnIndex
-} from './utils/structure';
+	splitVertically
+} from './utils';
+import { findAncestor } from './commands/utils';
+import { cropTableToDimensions, trimTableCellIfNeeded } from './tableselection/croptable';
+import TableUtils from './tableutils';
 
 /**
  * This plugin adds support for copying/cutting/pasting fragments of tables.
@@ -55,8 +56,6 @@ export default class TableClipboard extends Plugin {
 		this.listenTo( viewDocument, 'copy', ( evt, data ) => this._onCopyCut( evt, data ) );
 		this.listenTo( viewDocument, 'cut', ( evt, data ) => this._onCopyCut( evt, data ) );
 		this.listenTo( editor.model, 'insertContent', ( evt, args ) => this._onInsertContent( evt, ...args ), { priority: 'high' } );
-
-		this.decorate( '_replaceTableSlotCell' );
 	}
 
 	/**
@@ -114,18 +113,16 @@ export default class TableClipboard extends Plugin {
 		const model = this.editor.model;
 		const tableUtils = this.editor.plugins.get( TableUtils );
 
-		// We might need to crop table before inserting so reference might change.
-		let pastedTable = getTableIfOnlyTableInContent( content, model );
+		const selectedTableCells = getSelectionAffectedTableCells( model.document.selection );
 
-		if ( !pastedTable ) {
+		if ( !selectedTableCells.length ) {
 			return;
 		}
 
-		const selectedTableCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
+		// We might need to crop table before inserting so reference might change.
+		let pastedTable = getTableIfOnlyTableInContent( content );
 
-		if ( !selectedTableCells.length ) {
-			removeEmptyRowsColumns( pastedTable, tableUtils );
-
+		if ( !pastedTable ) {
 			return;
 		}
 
@@ -133,18 +130,66 @@ export default class TableClipboard extends Plugin {
 		evt.stop();
 
 		model.change( writer => {
-			const pastedDimensions = {
-				width: tableUtils.getColumns( pastedTable ),
-				height: tableUtils.getRows( pastedTable )
-			};
+			const columnIndexes = getColumnIndexes( selectedTableCells );
+			const rowIndexes = getRowIndexes( selectedTableCells );
 
-			// Prepare the table for pasting.
-			const selection = prepareTableForPasting( selectedTableCells, pastedDimensions, writer, tableUtils );
+			let { first: firstColumnOfSelection, last: lastColumnOfSelection } = columnIndexes;
+			let { first: firstRowOfSelection, last: lastRowOfSelection } = rowIndexes;
+
+			const pasteHeight = tableUtils.getRows( pastedTable );
+			const pasteWidth = tableUtils.getColumns( pastedTable );
+
+			// Content table to which we insert a pasted table.
+			const selectedTable = findAncestor( 'table', selectedTableCells[ 0 ] );
+
+			// Single cell selected - expand selection to pasted table dimensions.
+			const shouldExpandSelection = selectedTableCells.length === 1;
+
+			if ( shouldExpandSelection ) {
+				lastRowOfSelection += pasteHeight - 1;
+				lastColumnOfSelection += pasteWidth - 1;
+
+				expandTableSize( selectedTable, lastRowOfSelection + 1, lastColumnOfSelection + 1, writer, tableUtils );
+			}
+
+			// In case of expanding selection we do not reset the selection so in this case we will always try to fix selection
+			// like in the case of a non-rectangular area. This might be fixed by re-setting selected cells array but this shortcut is safe.
+			if ( shouldExpandSelection || !isSelectionRectangular( selectedTableCells, tableUtils ) ) {
+				const splitDimensions = {
+					firstRow: firstRowOfSelection,
+					lastRow: lastRowOfSelection,
+					firstColumn: firstColumnOfSelection,
+					lastColumn: lastColumnOfSelection
+				};
+
+				// For a non-rectangular selection (ie in which some cells sticks out from a virtual selection rectangle) we need to create
+				// a table layout that has a rectangular selection. This will split cells so the selection become rectangular.
+				// Beyond this point we will operate on fixed content table.
+				splitCellsToRectangularSelection( selectedTable, splitDimensions, writer );
+			}
+			// However a selected table fragment might be invalid if examined alone. Ie such table fragment:
+			//
+			//    +---+---+---+---+
+			//  0 | a | b | c | d |
+			//    +   +   +---+---+
+			//  1 |   | e | f | g |
+			//    +   +---+   +---+
+			//  2 |   | h |   | i | <- last row, each cell has rowspan = 2,
+			//    +   +   +   +   +    so we need to return 3, not 2
+			//  3 |   |   |   |   |
+			//    +---+---+---+---+
+			//
+			// is invalid as the cells "h" and "i" have rowspans.
+			// This case needs only adjusting the selection dimension as the rest of the algorithm operates on empty slots also.
+			else {
+				lastRowOfSelection = adjustLastRowIndex( selectedTable, rowIndexes, columnIndexes );
+				lastColumnOfSelection = adjustLastColumnIndex( selectedTable, rowIndexes, columnIndexes );
+			}
 
 			// Beyond this point we operate on a fixed content table with rectangular selection and proper last row/column values.
 
-			const selectionHeight = selection.lastRow - selection.firstRow + 1;
-			const selectionWidth = selection.lastColumn - selection.firstColumn + 1;
+			const selectionHeight = lastRowOfSelection - firstRowOfSelection + 1;
+			const selectionWidth = lastColumnOfSelection - firstColumnOfSelection + 1;
 
 			// Crop pasted table if:
 			// - Pasted table dimensions exceeds selection area.
@@ -156,291 +201,134 @@ export default class TableClipboard extends Plugin {
 			const cropDimensions = {
 				startRow: 0,
 				startColumn: 0,
-				endRow: Math.min( selectionHeight, pastedDimensions.height ) - 1,
-				endColumn: Math.min( selectionWidth, pastedDimensions.width ) - 1
+				endRow: Math.min( selectionHeight - 1, pasteHeight - 1 ),
+				endColumn: Math.min( selectionWidth - 1, pasteWidth - 1 )
 			};
 
-			pastedTable = cropTableToDimensions( pastedTable, cropDimensions, writer );
+			pastedTable = cropTableToDimensions( pastedTable, cropDimensions, writer, tableUtils );
 
-			// Content table to which we insert a pasted table.
-			const selectedTable = selectedTableCells[ 0 ].findAncestor( 'table' );
+			const pastedDimensions = {
+				width: pasteWidth,
+				height: pasteHeight
+			};
+			const selectionDimensions = {
+				firstColumnOfSelection,
+				firstRowOfSelection,
+				lastColumnOfSelection,
+				lastRowOfSelection
+			};
 
-			const cellsToSelect = this._replaceSelectedCellsWithPasted( pastedTable, pastedDimensions, selectedTable, selection, writer );
-
-			if ( this.editor.plugins.get( 'TableSelection' ).isEnabled ) {
-				// Selection ranges must be sorted because the first and last selection ranges are considered
-				// as anchor/focus cell ranges for multi-cell selection.
-				const selectionRanges = tableUtils.sortRanges( cellsToSelect.map( cell => writer.createRangeOn( cell ) ) );
-
-				writer.setSelection( selectionRanges );
-			} else {
-				// Set selection inside first cell if multi-cell selection is disabled.
-				writer.setSelection( cellsToSelect[ 0 ], 0 );
-			}
+			replaceSelectedCellsWithPasted( pastedTable, pastedDimensions, selectedTable, selectionDimensions, writer );
 		} );
 	}
+}
 
-	/**
-	 * Replaces the part of selectedTable with pastedTable.
-	 *
-	 * @private
-	 * @param {module:engine/model/element~Element} pastedTable
-	 * @param {Object} pastedDimensions
-	 * @param {Number} pastedDimensions.height
-	 * @param {Number} pastedDimensions.width
-	 * @param {module:engine/model/element~Element} selectedTable
-	 * @param {Object} selection
-	 * @param {Number} selection.firstColumn
-	 * @param {Number} selection.firstRow
-	 * @param {Number} selection.lastColumn
-	 * @param {Number} selection.lastRow
-	 * @param {module:engine/model/writer~Writer} writer
-	 * @returns {Array.<module:engine/model/element~Element>}
-	 */
-	_replaceSelectedCellsWithPasted( pastedTable, pastedDimensions, selectedTable, selection, writer ) {
-		const { width: pastedWidth, height: pastedHeight } = pastedDimensions;
+// Replaces the part of selectedTable with pastedTable.
+//
+// @param {module:engine/model/element~Element} pastedTable
+// @param {Object} pastedDimensions
+// @param {Number} pastedDimensions.height
+// @param {Number} pastedDimensions.width
+// @param {module:engine/model/element~Element} selectedTable
+// @param {Object} selectionDimensions
+// @param {Number} selectionDimensions.firstColumnOfSelection
+// @param {Number} selectionDimensions.firstRowOfSelection
+// @param {Number} selectionDimensions.lastColumnOfSelection
+// @param {Number} selectionDimensions.lastRowOfSelection
+// @param {module:engine/model/writer~Writer} writer
+function replaceSelectedCellsWithPasted( pastedTable, pastedDimensions, selectedTable, selectionDimensions, writer ) {
+	const {
+		firstColumnOfSelection, lastColumnOfSelection,
+		firstRowOfSelection, lastRowOfSelection
+	} = selectionDimensions;
 
-		// Holds two-dimensional array that is addressed by [ row ][ column ] that stores cells anchored at given location.
-		const pastedTableLocationMap = createLocationMap( pastedTable, pastedWidth, pastedHeight );
+	const { width: pastedWidth, height: pastedHeight } = pastedDimensions;
 
-		const selectedTableMap = [ ...new TableWalker( selectedTable, {
-			startRow: selection.firstRow,
-			endRow: selection.lastRow,
-			startColumn: selection.firstColumn,
-			endColumn: selection.lastColumn,
-			includeAllSlots: true
-		} ) ];
+	// Holds two-dimensional array that is addressed by [ row ][ column ] that stores cells anchored at given location.
+	const pastedTableLocationMap = createLocationMap( pastedTable, pastedWidth, pastedHeight );
 
-		// Selection must be set to pasted cells (some might be removed or new created).
-		const cellsToSelect = [];
+	const selectedTableMap = [ ...new TableWalker( selectedTable, {
+		startRow: firstRowOfSelection,
+		endRow: lastRowOfSelection,
+		includeSpanned: true
+	} ) ];
 
-		// Store next cell insert position.
-		let insertPosition;
+	// Selection must be set to pasted cells (some might be removed or new created).
+	const cellsToSelect = [];
 
-		// Content table replace cells algorithm iterates over a selected table fragment and:
-		//
-		// - Removes existing table cells at current slot (location).
-		// - Inserts cell from a pasted table for a matched slots.
-		//
-		// This ensures proper table geometry after the paste
-		for ( const tableSlot of selectedTableMap ) {
-			const { row, column } = tableSlot;
+	// Store previous cell in order to insert a new table cells after it (if required).
+	let previousCellInRow;
 
-			// Save the insert position for current row start.
-			if ( column === selection.firstColumn ) {
-				insertPosition = tableSlot.getPositionBefore();
+	// Content table replace cells algorithm iterates over a selected table fragment and:
+	//
+	// - Removes existing table cells at current slot (location).
+	// - Inserts cell from a pasted table for a matched slots.
+	//
+	// This ensures proper table geometry after the paste
+	for ( const { row, column, cell, isSpanned } of selectedTableMap ) {
+		if ( column === 0 ) {
+			previousCellInRow = null;
+		}
+
+		// Could use startColumn, endColumn. See: https://github.com/ckeditor/ckeditor5/issues/6785.
+		if ( column < firstColumnOfSelection || column > lastColumnOfSelection ) {
+			// Only update the previousCellInRow for non-spanned slots.
+			if ( !isSpanned ) {
+				previousCellInRow = cell;
 			}
 
-			// Map current table slot location to an pasted table slot location.
-			const pastedRow = row - selection.firstRow;
-			const pastedColumn = column - selection.firstColumn;
-			const pastedCell = pastedTableLocationMap[ pastedRow % pastedHeight ][ pastedColumn % pastedWidth ];
-
-			// Clone cell to insert (to duplicate its attributes and children).
-			// Cloning is required to support repeating pasted table content when inserting to a bigger selection.
-			const cellToInsert = pastedCell ? writer.cloneElement( pastedCell ) : null;
-
-			// Replace the cell from the current slot with new table cell.
-			const newTableCell = this._replaceTableSlotCell( tableSlot, cellToInsert, insertPosition, writer );
-
-			// The cell was only removed.
-			if ( !newTableCell ) {
-				continue;
-			}
-
-			// Trim the cell if it's row/col-spans would exceed selection area.
-			trimTableCellIfNeeded( newTableCell, row, column, selection.lastRow, selection.lastColumn, writer );
-
-			cellsToSelect.push( newTableCell );
-
-			insertPosition = writer.createPositionAfter( newTableCell );
+			continue;
 		}
-
-		// If there are any headings, all the cells that overlap from heading must be splitted.
-		const headingRows = parseInt( selectedTable.getAttribute( 'headingRows' ) || 0 );
-		const headingColumns = parseInt( selectedTable.getAttribute( 'headingColumns' ) || 0 );
-
-		const areHeadingRowsIntersectingSelection = selection.firstRow < headingRows && headingRows <= selection.lastRow;
-		const areHeadingColumnsIntersectingSelection = selection.firstColumn < headingColumns && headingColumns <= selection.lastColumn;
-
-		if ( areHeadingRowsIntersectingSelection ) {
-			const columnsLimit = { first: selection.firstColumn, last: selection.lastColumn };
-			const newCells = doHorizontalSplit( selectedTable, headingRows, columnsLimit, writer, selection.firstRow );
-
-			cellsToSelect.push( ...newCells );
-		}
-
-		if ( areHeadingColumnsIntersectingSelection ) {
-			const rowsLimit = { first: selection.firstRow, last: selection.lastRow };
-			const newCells = doVerticalSplit( selectedTable, headingColumns, rowsLimit, writer );
-
-			cellsToSelect.push( ...newCells );
-		}
-
-		return cellsToSelect;
-	}
-
-	/**
-	 * Replaces a single table slot.
-	 *
-	 * @private
-	 * @param {module:table/tablewalker~TableSlot} tableSlot
-	 * @param {module:engine/model/element~Element} cellToInsert
-	 * @param {module:engine/model/position~Position} insertPosition
-	 * @param {module:engine/model/writer~Writer} writer
-	 * @returns {module:engine/model/element~Element|null} Inserted table cell or null if slot should remain empty.
-	 */
-	_replaceTableSlotCell( tableSlot, cellToInsert, insertPosition, writer ) {
-		const { cell, isAnchor } = tableSlot;
 
 		// If the slot is occupied by a cell in a selected table - remove it.
 		// The slot of this cell will be either:
 		// - Replaced by a pasted table cell.
 		// - Spanned by a previously pasted table cell.
-		if ( isAnchor ) {
+		if ( !isSpanned ) {
 			writer.remove( cell );
 		}
 
+		// Map current table slot location to an pasted table slot location.
+		const pastedRow = row - firstRowOfSelection;
+		const pastedColumn = column - firstColumnOfSelection;
+		const pastedCell = pastedTableLocationMap[ pastedRow % pastedHeight ][ pastedColumn % pastedWidth ];
+
 		// There is no cell to insert (might be spanned by other cell in a pasted table) - advance to the next content table slot.
-		if ( !cellToInsert ) {
-			return null;
+		if ( !pastedCell ) {
+			continue;
+		}
+
+		// Clone cell to insert (to duplicate its attributes and children).
+		// Cloning is required to support repeating pasted table content when inserting to a bigger selection.
+		const cellToInsert = pastedCell._clone( true );
+
+		// Trim the cell if it's row/col-spans would exceed selection area.
+		trimTableCellIfNeeded( cellToInsert, row, column, lastRowOfSelection, lastColumnOfSelection, writer );
+
+		let insertPosition;
+
+		if ( !previousCellInRow ) {
+			insertPosition = writer.createPositionAt( selectedTable.getChild( row ), 0 );
+		} else {
+			insertPosition = writer.createPositionAfter( previousCellInRow );
 		}
 
 		writer.insert( cellToInsert, insertPosition );
-
-		return cellToInsert;
+		cellsToSelect.push( cellToInsert );
+		previousCellInRow = cellToInsert;
 	}
 
-	/**
-	 * Extracts the table for pasting into a table.
-	 *
-	 * @protected
-	 * @param {module:engine/model/documentfragment~DocumentFragment|module:engine/model/item~Item} content The content to insert.
-	 * @param {module:engine/model/model~Model} model The editor model.
-	 * @returns {module:engine/model/element~Element|null}
-	 */
-	getTableIfOnlyTableInContent( content, model ) {
-		return getTableIfOnlyTableInContent( content, model );
-	}
-}
-
-function getTableIfOnlyTableInContent( content, model ) {
-	if ( !content.is( 'documentFragment' ) && !content.is( 'element' ) ) {
-		return null;
-	}
-
-	// Table passed directly.
-	if ( content.is( 'element', 'table' ) ) {
-		return content;
-	}
-
-	// We do not support mixed content when pasting table into table.
-	// See: https://github.com/ckeditor/ckeditor5/issues/6817.
-	if ( content.childCount == 1 && content.getChild( 0 ).is( 'element', 'table' ) ) {
-		return content.getChild( 0 );
-	}
-
-	// If there are only whitespaces around a table then use that table for pasting.
-
-	const contentRange = model.createRangeIn( content );
-
-	for ( const element of contentRange.getItems() ) {
-		if ( element.is( 'element', 'table' ) ) {
-			// Stop checking if there is some content before table.
-			const rangeBefore = model.createRange( contentRange.start, model.createPositionBefore( element ) );
-
-			if ( model.hasContent( rangeBefore, { ignoreWhitespaces: true } ) ) {
-				return null;
-			}
-
-			// Stop checking if there is some content after table.
-			const rangeAfter = model.createRange( model.createPositionAfter( element ), contentRange.end );
-
-			if ( model.hasContent( rangeAfter, { ignoreWhitespaces: true } ) ) {
-				return null;
-			}
-
-			// There wasn't any content neither before nor after.
-			return element;
-		}
-	}
-
-	return null;
-}
-
-// Prepares a table for pasting and returns adjusted selection dimensions.
-//
-// @param {Array.<module:engine/model/element~Element>} selectedTableCells
-// @param {Object} pastedDimensions
-// @param {Number} pastedDimensions.height
-// @param {Number} pastedDimensions.width
-// @param {module:engine/model/writer~Writer} writer
-// @param {module:table/tableutils~TableUtils} tableUtils
-// @returns {Object} selection
-// @returns {Number} selection.firstColumn
-// @returns {Number} selection.firstRow
-// @returns {Number} selection.lastColumn
-// @returns {Number} selection.lastRow
-function prepareTableForPasting( selectedTableCells, pastedDimensions, writer, tableUtils ) {
-	const selectedTable = selectedTableCells[ 0 ].findAncestor( 'table' );
-
-	const columnIndexes = tableUtils.getColumnIndexes( selectedTableCells );
-	const rowIndexes = tableUtils.getRowIndexes( selectedTableCells );
-
-	const selection = {
-		firstColumn: columnIndexes.first,
-		lastColumn: columnIndexes.last,
-		firstRow: rowIndexes.first,
-		lastRow: rowIndexes.last
-	};
-
-	// Single cell selected - expand selection to pasted table dimensions.
-	const shouldExpandSelection = selectedTableCells.length === 1;
-
-	if ( shouldExpandSelection ) {
-		selection.lastRow += pastedDimensions.height - 1;
-		selection.lastColumn += pastedDimensions.width - 1;
-
-		expandTableSize( selectedTable, selection.lastRow + 1, selection.lastColumn + 1, tableUtils );
-	}
-
-	// In case of expanding selection we do not reset the selection so in this case we will always try to fix selection
-	// like in the case of a non-rectangular area. This might be fixed by re-setting selected cells array but this shortcut is safe.
-	if ( shouldExpandSelection || !tableUtils.isSelectionRectangular( selectedTableCells ) ) {
-		// For a non-rectangular selection (ie in which some cells sticks out from a virtual selection rectangle) we need to create
-		// a table layout that has a rectangular selection. This will split cells so the selection become rectangular.
-		// Beyond this point we will operate on fixed content table.
-		splitCellsToRectangularSelection( selectedTable, selection, writer );
-	}
-	// However a selected table fragment might be invalid if examined alone. Ie such table fragment:
-	//
-	//    +---+---+---+---+
-	//  0 | a | b | c | d |
-	//    +   +   +---+---+
-	//  1 |   | e | f | g |
-	//    +   +---+   +---+
-	//  2 |   | h |   | i | <- last row, each cell has rowspan = 2,
-	//    +   +   +   +   +    so we need to return 3, not 2
-	//  3 |   |   |   |   |
-	//    +---+---+---+---+
-	//
-	// is invalid as the cells "h" and "i" have rowspans.
-	// This case needs only adjusting the selection dimension as the rest of the algorithm operates on empty slots also.
-	else {
-		selection.lastRow = adjustLastRowIndex( selectedTable, selection );
-		selection.lastColumn = adjustLastColumnIndex( selectedTable, selection );
-	}
-
-	return selection;
+	writer.setSelection( cellsToSelect.map( cell => writer.createRangeOn( cell ) ) );
 }
 
 // Expand table (in place) to expected size.
-function expandTableSize( table, expectedHeight, expectedWidth, tableUtils ) {
+function expandTableSize( table, expectedHeight, expectedWidth, writer, tableUtils ) {
 	const tableWidth = tableUtils.getColumns( table );
 	const tableHeight = tableUtils.getRows( table );
 
 	if ( expectedWidth > tableWidth ) {
 		tableUtils.insertColumns( table, {
+			batch: writer.batch,
 			at: tableWidth,
 			columns: expectedWidth - tableWidth
 		} );
@@ -448,10 +336,26 @@ function expandTableSize( table, expectedHeight, expectedWidth, tableUtils ) {
 
 	if ( expectedHeight > tableHeight ) {
 		tableUtils.insertRows( table, {
+			batch: writer.batch,
 			at: tableHeight,
 			rows: expectedHeight - tableHeight
 		} );
 	}
+}
+
+function getTableIfOnlyTableInContent( content ) {
+	// Table passed directly.
+	if ( content.is( 'table' ) ) {
+		return content;
+	}
+
+	// We do not support mixed content when pasting table into table.
+	// See: https://github.com/ckeditor/ckeditor5/issues/6817.
+	if ( content.childCount != 1 || !content.getChild( 0 ).is( 'table' ) ) {
+		return null;
+	}
+
+	return content.getChild( 0 );
 }
 
 // Returns two-dimensional array that is addressed by [ row ][ column ] that stores cells anchored at given location.
@@ -556,9 +460,11 @@ function doHorizontalSplit( table, splitRow, limitColumns, writer, startRow = 0 
 	const overlappingCells = getVerticallyOverlappingCells( table, splitRow, startRow );
 
 	// Filter out cells that are not touching insides of the rectangular selection.
-	const cellsToSplit = overlappingCells.filter( ( { column, cellWidth } ) => isAffectedBySelection( column, cellWidth, limitColumns ) );
+	const cellsToSplit = overlappingCells.filter( ( { column, colspan } ) => isAffectedBySelection( column, colspan, limitColumns ) );
 
-	return cellsToSplit.map( ( { cell } ) => splitHorizontally( cell, splitRow, writer ) );
+	for ( const { cell } of cellsToSplit ) {
+		splitHorizontally( cell, splitRow, writer );
+	}
 }
 
 function doVerticalSplit( table, splitColumn, limitRows, writer ) {
@@ -570,9 +476,11 @@ function doVerticalSplit( table, splitColumn, limitRows, writer ) {
 	const overlappingCells = getHorizontallyOverlappingCells( table, splitColumn );
 
 	// Filter out cells that are not touching insides of the rectangular selection.
-	const cellsToSplit = overlappingCells.filter( ( { row, cellHeight } ) => isAffectedBySelection( row, cellHeight, limitRows ) );
+	const cellsToSplit = overlappingCells.filter( ( { row, rowspan } ) => isAffectedBySelection( row, rowspan, limitRows ) );
 
-	return cellsToSplit.map( ( { cell, column } ) => splitVertically( cell, column, splitColumn, writer ) );
+	for ( const { cell, column } of cellsToSplit ) {
+		splitVertically( cell, column, splitColumn, writer );
+	}
 }
 
 // Checks if cell at given row (column) is affected by a rectangular selection defined by first/last column (row).
@@ -586,4 +494,77 @@ function isAffectedBySelection( index, span, limit ) {
 	const overlapsSelectionFromOutside = index < first && endIndex >= first;
 
 	return isInsideSelection || overlapsSelectionFromOutside;
+}
+
+// Returns adjusted last row index if selection covers part of a row with empty slots (spanned by other cells).
+// The rowIndexes.last is equal to last row index but selection might be bigger.
+//
+// This happens *only* on rectangular selection so we analyze a case like this:
+//
+//    +---+---+---+---+
+//  0 | a | b | c | d |
+//    +   +   +---+---+
+//  1 |   | e | f | g |
+//    +   +---+   +---+
+//  2 |   | h |   | i | <- last row, each cell has rowspan = 2,
+//    +   +   +   +   +    so we need to return 3, not 2
+//  3 |   |   |   |   |
+//    +---+---+---+---+
+function adjustLastRowIndex( table, rowIndexes, columnIndexes ) {
+	const tableIterator = new TableWalker( table, {
+		startRow: rowIndexes.last,
+		endRow: rowIndexes.last
+	} );
+
+	const lastRowMap = Array.from( tableIterator ).filter( ( { column } ) => {
+		// Could use startColumn, endColumn. See: https://github.com/ckeditor/ckeditor5/issues/6785.
+		return columnIndexes.first <= column && column <= columnIndexes.last;
+	} );
+
+	const everyCellHasSingleRowspan = lastRowMap.every( ( { rowspan } ) => rowspan === 1 );
+
+	// It is a "flat" row, so the last row index is OK.
+	if ( everyCellHasSingleRowspan ) {
+		return rowIndexes.last;
+	}
+
+	// Otherwise get any cell's rowspan and adjust the last row index.
+	const rowspanAdjustment = lastRowMap[ 0 ].rowspan - 1;
+	return rowIndexes.last + rowspanAdjustment;
+}
+
+// Returns adjusted last column index if selection covers part of a column with empty slots (spanned by other cells).
+// The columnIndexes.last is equal to last column index but selection might be bigger.
+//
+// This happens *only* on rectangular selection so we analyze a case like this:
+//
+//   0   1   2   3
+// +---+---+---+---+
+// | a             |
+// +---+---+---+---+
+// | b | c | d     |
+// +---+---+---+---+
+// | e     | f     |
+// +---+---+---+---+
+// | g | h         |
+// +---+---+---+---+
+//           ^
+//          last column, each cell has colspan = 2, so we need to return 3, not 2
+function adjustLastColumnIndex( table, rowIndexes, columnIndexes ) {
+	const lastColumnMap = Array.from( new TableWalker( table, {
+		startRow: rowIndexes.first,
+		endRow: rowIndexes.last,
+		column: columnIndexes.last
+	} ) );
+
+	const everyCellHasSingleColspan = lastColumnMap.every( ( { colspan } ) => colspan === 1 );
+
+	// It is a "flat" column, so the last column index is OK.
+	if ( everyCellHasSingleColspan ) {
+		return columnIndexes.last;
+	}
+
+	// Otherwise get any cell's colspan and adjust the last column index.
+	const colspanAdjustment = lastColumnMap[ 0 ].colspan - 1;
+	return columnIndexes.last + colspanAdjustment;
 }

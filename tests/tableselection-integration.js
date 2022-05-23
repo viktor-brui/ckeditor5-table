@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -18,7 +18,8 @@ import TableClipboard from '../src/tableclipboard';
 
 import { getData as getModelData, setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
 
-import { assertSelectedCells, modelTable } from './_utils/utils';
+import { modelTable } from './_utils/utils';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 import DomEventData from '@ckeditor/ckeditor5-engine/src/view/observer/domeventdata';
 import { getCode } from '@ckeditor/ckeditor5-utils/src/keyboard';
 import Input from '@ckeditor/ckeditor5-typing/src/input';
@@ -53,14 +54,14 @@ describe( 'TableSelection - integration', () => {
 			} );
 			viewDocument.fire( 'delete', domEventData );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ '', '', '13' ],
 				[ '', '[]', '23' ],
 				[ '31', '32', '33' ]
 			] ) );
 		} );
 
-		it( 'should clear contents of the selected table cells and put selection in last cell on delete forward', () => {
+		it( 'should clear contents of the selected table cells and put selection in last cell on forward delete', () => {
 			tableSelection.setCellSelection(
 				modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
 				modelRoot.getNodeByPath( [ 0, 1, 1 ] )
@@ -75,7 +76,7 @@ describe( 'TableSelection - integration', () => {
 			} );
 			viewDocument.fire( 'delete', domEventData );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ '[]', '', '13' ],
 				[ '', '', '23' ],
 				[ '31', '32', '33' ]
@@ -98,7 +99,7 @@ describe( 'TableSelection - integration', () => {
 			} );
 			viewDocument.fire( 'delete', domEventData );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ '1[]', '12', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -132,7 +133,7 @@ describe( 'TableSelection - integration', () => {
 				}
 			] );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ '', '', '13' ],
 				[ '', 'x[]', '23' ],
 				[ '31', '32', '33' ]
@@ -155,7 +156,7 @@ describe( 'TableSelection - integration', () => {
 				}
 			] );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ 'x[]11', '12', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -183,7 +184,7 @@ describe( 'TableSelection - integration', () => {
 				stop: sinon.spy()
 			} );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			assertEqualMarkup( getModelData( model ), modelTable( [
 				[ 'foo[]', '', '13' ],
 				[ '', '', '23' ],
 				[ '31', '32', '33' ]
@@ -198,8 +199,8 @@ describe( 'TableSelection - integration', () => {
 
 			editor.execute( 'horizontalLine' );
 
-			expect(
-				getModelData( model ) ).to.equalMarkup(
+			assertEqualMarkup(
+				getModelData( model ),
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell><horizontalLine></horizontalLine><paragraph>[]</paragraph></tableCell>' +
@@ -219,40 +220,6 @@ describe( 'TableSelection - integration', () => {
 				'</table>'
 			);
 		} );
-
-		// https://github.com/ckeditor/ckeditor5/issues/7659.
-		// The fix is in the `DocumentSelection` class but this test is here to make sure that the fix works
-		// and that the behavior won't change in the future.
-		it( 'should not fix selection if not all ranges were removed', () => {
-			// [ ][ ][ ]
-			// [x][x][ ]
-			// [x][x][ ]
-			tableSelection.setCellSelection(
-				modelRoot.getNodeByPath( [ 0, 1, 0 ] ),
-				modelRoot.getNodeByPath( [ 0, 2, 1 ] )
-			);
-
-			editor.model.change( writer => {
-				// Remove second row.
-				writer.remove( modelRoot.getNodeByPath( [ 0, 1 ] ) );
-			} );
-
-			expect(
-				getModelData( model ) ).to.equalMarkup(
-				'<table>' +
-					'<tableRow>' +
-						'<tableCell><paragraph>11</paragraph></tableCell>' +
-						'<tableCell><paragraph>12</paragraph></tableCell>' +
-						'<tableCell><paragraph>13</paragraph></tableCell>' +
-					'</tableRow>' +
-					'<tableRow>' +
-						'[<tableCell><paragraph>31</paragraph></tableCell>]' +
-						'[<tableCell><paragraph>32</paragraph></tableCell>]' +
-						'<tableCell><paragraph>33</paragraph></tableCell>' +
-					'</tableRow>' +
-				'</table>'
-			);
-		} );
 	} );
 
 	describe( 'with undo', () => {
@@ -260,11 +227,9 @@ describe( 'TableSelection - integration', () => {
 			await setupEditor( [ UndoEditing ] );
 		} );
 
+		// See https://github.com/ckeditor/ckeditor5/issues/6634.
 		it( 'works with merge cells command', () => {
-			setModelData( editor.model, modelTable( [
-				[ '00', '01' ],
-				[ '10', '11' ]
-			] ) );
+			setModelData( editor.model, modelTable( [ [ '00', '01' ] ] ) );
 
 			tableSelection.setCellSelection(
 				modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
@@ -273,22 +238,15 @@ describe( 'TableSelection - integration', () => {
 
 			editor.execute( 'mergeTableCells' );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
-				[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ],
-				[ '10', '11' ]
+			assertEqualMarkup( getModelData( model ), modelTable( [
+				[ { colspan: 2, contents: '<paragraph>[00</paragraph><paragraph>01]</paragraph>' } ]
 			] ) );
 
 			editor.execute( 'undo' );
 
-			expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( modelTable( [
-				[ '00', '01' ],
-				[ '10', '11' ]
+			assertEqualMarkup( getModelData( model ), modelTable( [
+				[ '[]00', '01' ]
 			] ) );
-
-			assertSelectedCells( model, [
-				[ 1, 1 ],
-				[ 0, 0 ]
-			] );
 		} );
 	} );
 

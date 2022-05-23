@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2019, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,24 +7,28 @@
  * @module table/tablecellproperties/tablecellpropertiesui
  */
 
-import { Plugin } from 'ckeditor5/src/core';
-import { ButtonView, clickOutsideHandler, ContextualBalloon, getLocalizedColorOptions, normalizeColorOptions } from 'ckeditor5/src/ui';
-
+import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
+import ButtonView from '@ckeditor/ckeditor5-ui/src/button/buttonview';
+import { getTableWidgetAncestor } from '../utils';
+import clickOutsideHandler from '@ckeditor/ckeditor5-ui/src/bindings/clickoutsidehandler';
+import ContextualBalloon from '@ckeditor/ckeditor5-ui/src/panel/balloon/contextualballoon';
 import TableCellPropertiesView from './ui/tablecellpropertiesview';
+import tableCellProperties from './../../theme/icons/table-cell-properties.svg';
 import {
 	colorFieldValidator,
+	getBalloonCellPositionData,
 	getLocalizedColorErrorText,
 	getLocalizedLengthErrorText,
 	defaultColors,
 	lengthFieldValidator,
-	lineWidthFieldValidator
-} from '../utils/ui/table-properties';
+	lineWidthFieldValidator,
+	repositionContextualBalloon
+} from '../ui/utils';
+import {
+	getLocalizedColorOptions,
+	normalizeColorOptions
+} from '@ckeditor/ckeditor5-ui/src/colorgrid/utils';
 import { debounce } from 'lodash-es';
-import { getTableWidgetAncestor } from '../utils/ui/widget';
-import { getBalloonCellPositionData, repositionContextualBalloon } from '../utils/ui/contextualballoon';
-
-import tableCellProperties from './../../theme/icons/table-cell-properties.svg';
-import { getNormalizedDefaultProperties } from '../utils/table-properties';
 
 const ERROR_TEXT_TIMEOUT = 500;
 
@@ -83,22 +87,6 @@ export default class TableCellPropertiesUI extends Plugin {
 	init() {
 		const editor = this.editor;
 		const t = editor.t;
-
-		/**
-		 * The default table cell properties.
-		 *
-		 * @protected
-		 * @member {module:table/tablecellproperties~TableCellPropertiesOptions}
-		 */
-		this._defaultTableCellProperties = getNormalizedDefaultProperties(
-			editor.config.get( 'table.tableCellProperties.defaultProperties' ),
-			{
-				includeVerticalAlignmentProperty: true,
-				includeHorizontalAlignmentProperty: true,
-				includePaddingProperty: true,
-				isRightToLeftContent: editor.locale.contentLanguageDirection === 'rtl'
-			}
-		);
 
 		/**
 		 * The contextual balloon plugin instance.
@@ -174,8 +162,7 @@ export default class TableCellPropertiesUI extends Plugin {
 		const localizedBackgroundColors = getLocalizedColorOptions( editor.locale, backgroundColorsConfig );
 		const view = new TableCellPropertiesView( editor.locale, {
 			borderColors: localizedBorderColors,
-			backgroundColors: localizedBackgroundColors,
-			defaultTableCellProperties: this._defaultTableCellProperties
+			backgroundColors: localizedBackgroundColors
 		} );
 		const t = editor.t;
 
@@ -226,67 +213,52 @@ export default class TableCellPropertiesUI extends Plugin {
 		// property of the view has changed. They also validate the value and display errors in the UI
 		// when necessary. This makes the view live, which means the changes are
 		// visible in the editing as soon as the user types or changes fields' values.
-		view.on(
-			'change:borderStyle',
-			this._getPropertyChangeCallback( 'tableCellBorderStyle', this._defaultTableCellProperties.borderStyle )
-		);
+		view.on( 'change:borderStyle', this._getPropertyChangeCallback( 'tableCellBorderStyle' ) );
 
 		view.on( 'change:borderColor', this._getValidatedPropertyChangeCallback( {
 			viewField: view.borderColorInput,
 			commandName: 'tableCellBorderColor',
 			errorText: colorErrorText,
-			validator: colorFieldValidator,
-			defaultValue: this._defaultTableCellProperties.borderColor
+			validator: colorFieldValidator
 		} ) );
 
 		view.on( 'change:borderWidth', this._getValidatedPropertyChangeCallback( {
 			viewField: view.borderWidthInput,
 			commandName: 'tableCellBorderWidth',
 			errorText: lengthErrorText,
-			validator: lineWidthFieldValidator,
-			defaultValue: this._defaultTableCellProperties.borderWidth
+			validator: lineWidthFieldValidator
 		} ) );
 
 		view.on( 'change:padding', this._getValidatedPropertyChangeCallback( {
 			viewField: view.paddingInput,
 			commandName: 'tableCellPadding',
 			errorText: lengthErrorText,
-			validator: lengthFieldValidator,
-			defaultValue: this._defaultTableCellProperties.padding
+			validator: lengthFieldValidator
 		} ) );
 
 		view.on( 'change:width', this._getValidatedPropertyChangeCallback( {
 			viewField: view.widthInput,
 			commandName: 'tableCellWidth',
 			errorText: lengthErrorText,
-			validator: lengthFieldValidator,
-			defaultValue: this._defaultTableCellProperties.width
+			validator: lengthFieldValidator
 		} ) );
 
 		view.on( 'change:height', this._getValidatedPropertyChangeCallback( {
 			viewField: view.heightInput,
 			commandName: 'tableCellHeight',
 			errorText: lengthErrorText,
-			validator: lengthFieldValidator,
-			defaultValue: this._defaultTableCellProperties.height
+			validator: lengthFieldValidator
 		} ) );
 
 		view.on( 'change:backgroundColor', this._getValidatedPropertyChangeCallback( {
 			viewField: view.backgroundInput,
 			commandName: 'tableCellBackgroundColor',
 			errorText: colorErrorText,
-			validator: colorFieldValidator,
-			defaultValue: this._defaultTableCellProperties.backgroundColor
+			validator: colorFieldValidator
 		} ) );
 
-		view.on(
-			'change:horizontalAlignment',
-			this._getPropertyChangeCallback( 'tableCellHorizontalAlignment', this._defaultTableCellProperties.horizontalAlignment )
-		);
-		view.on(
-			'change:verticalAlignment',
-			this._getPropertyChangeCallback( 'tableCellVerticalAlignment', this._defaultTableCellProperties.verticalAlignment )
-		);
+		view.on( 'change:horizontalAlignment', this._getPropertyChangeCallback( 'tableCellHorizontalAlignment' ) );
+		view.on( 'change:verticalAlignment', this._getPropertyChangeCallback( 'tableCellVerticalAlignment' ) );
 
 		return view;
 	}
@@ -303,22 +275,10 @@ export default class TableCellPropertiesUI extends Plugin {
 	 */
 	_fillViewFormFromCommandValues() {
 		const commands = this.editor.commands;
-		const borderStyleCommand = commands.get( 'tableCellBorderStyle' );
 
 		Object.entries( propertyToCommandMap )
-			.map( ( [ property, commandName ] ) => {
-				const defaultValue = this._defaultTableCellProperties[ property ] || '';
-
-				return [ property, commands.get( commandName ).value || defaultValue ];
-			} )
-			.forEach( ( [ property, value ] ) => {
-				// Do not set the `border-color` and `border-width` fields if `border-style:none`.
-				if ( ( property === 'borderColor' || property === 'borderWidth' ) && borderStyleCommand.value === 'none' ) {
-					return;
-				}
-
-				this.view.set( property, value );
-			} );
+			.map( ( [ property, commandName ] ) => [ property, commands.get( commandName ).value || '' ] )
+			.forEach( ( [ property, value ] ) => this.view.set( property, value ) );
 	}
 
 	/**
@@ -333,9 +293,6 @@ export default class TableCellPropertiesUI extends Plugin {
 	_showView() {
 		const editor = this.editor;
 
-		// Update the view with the model values.
-		this._fillViewFormFromCommandValues();
-
 		this._balloon.add( {
 			view: this.view,
 			position: getBalloonCellPositionData( editor )
@@ -343,6 +300,9 @@ export default class TableCellPropertiesUI extends Plugin {
 
 		// Create a new batch. Clicking "Cancel" will undo this batch.
 		this._undoStepBatch = editor.model.createBatch();
+
+		// Update the view with the model values.
+		this._fillViewFormFromCommandValues();
 
 		// Basic a11y.
 		this.view.focus();
@@ -399,17 +359,10 @@ export default class TableCellPropertiesUI extends Plugin {
 	 *
 	 * @private
 	 * @param {String} commandName
-	 * @param {String} defaultValue The default value of the command.
 	 * @returns {Function}
 	 */
-	_getPropertyChangeCallback( commandName, defaultValue ) {
-		return ( evt, propertyName, newValue, oldValue ) => {
-			// If the "oldValue" is missing and "newValue" is set to the default value, do not execute the command.
-			// It is an initial call (when opening the table properties view).
-			if ( !oldValue && defaultValue === newValue ) {
-				return;
-			}
-
+	_getPropertyChangeCallback( commandName ) {
+		return ( evt, propertyName, newValue ) => {
 			this.editor.execute( commandName, {
 				value: newValue,
 				batch: this._undoStepBatch
@@ -428,23 +381,15 @@ export default class TableCellPropertiesUI extends Plugin {
 	 * @param {module:ui/view~View} options.viewField
 	 * @param {Function} options.validator
 	 * @param {String} options.errorText
-	 * @param {String} options.defaultValue
 	 * @returns {Function}
 	 */
-	_getValidatedPropertyChangeCallback( options ) {
-		const { commandName, viewField, validator, errorText, defaultValue } = options;
+	_getValidatedPropertyChangeCallback( { commandName, viewField, validator, errorText } ) {
 		const setErrorTextDebounced = debounce( () => {
 			viewField.errorText = errorText;
 		}, ERROR_TEXT_TIMEOUT );
 
-		return ( evt, propertyName, newValue, oldValue ) => {
+		return ( evt, propertyName, newValue ) => {
 			setErrorTextDebounced.cancel();
-
-			// If the "oldValue" is missing and "newValue" is set to the default value, do not execute the command.
-			// It is an initial call (when opening the table properties view).
-			if ( !oldValue && defaultValue === newValue ) {
-				return;
-			}
 
 			if ( validator( newValue ) ) {
 				this.editor.execute( commandName, {

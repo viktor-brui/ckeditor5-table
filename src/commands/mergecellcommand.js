@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,10 +7,10 @@
  * @module table/commands/mergecellcommand
  */
 
-import { Command } from 'ckeditor5/src/core';
+import Command from '@ckeditor/ckeditor5-core/src/command';
 import TableWalker from '../tablewalker';
-import { isHeadingColumnCell } from '../utils/common';
-import { removeEmptyRowsColumns } from '../utils/structure';
+import { isHeadingColumnCell, findAncestor } from './utils';
+import { getTableCellsContainingSelection } from '../utils';
 
 /**
  * The merge cell command.
@@ -79,8 +79,7 @@ export default class MergeCellCommand extends Command {
 	execute() {
 		const model = this.editor.model;
 		const doc = model.document;
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const tableCell = tableUtils.getTableCellsContainingSelection( doc.selection )[ 0 ];
+		const tableCell = getTableCellsContainingSelection( doc.selection )[ 0 ];
 
 		const cellToMerge = this.value;
 		const direction = this.direction;
@@ -105,11 +104,13 @@ export default class MergeCellCommand extends Command {
 			writer.setAttribute( spanAttribute, cellSpan + cellToMergeSpan, cellToExpand );
 			writer.setSelection( writer.createRangeIn( cellToExpand ) );
 
-			const tableUtils = this.editor.plugins.get( 'TableUtils' );
-			const table = removedTableCellRow.findAncestor( 'table' );
+			// Remove empty row after merging.
+			if ( !removedTableCellRow.childCount ) {
+				const tableUtils = this.editor.plugins.get( 'TableUtils' );
+				const table = findAncestor( 'table', removedTableCellRow );
 
-			// Remove empty rows and columns after merging.
-			removeEmptyRowsColumns( table, tableUtils );
+				tableUtils.removeRows( table, { at: removedTableCellRow.index, batch: writer.batch } );
+			}
 		} );
 	}
 
@@ -122,17 +123,18 @@ export default class MergeCellCommand extends Command {
 	_getMergeableCell() {
 		const model = this.editor.model;
 		const doc = model.document;
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const tableCell = tableUtils.getTableCellsContainingSelection( doc.selection )[ 0 ];
+		const tableCell = getTableCellsContainingSelection( doc.selection )[ 0 ];
 
 		if ( !tableCell ) {
 			return;
 		}
 
+		const tableUtils = this.editor.plugins.get( 'TableUtils' );
+
 		// First get the cell on proper direction.
 		const cellToMerge = this.isHorizontal ?
 			getHorizontalCell( tableCell, this.direction, tableUtils ) :
-			getVerticalCell( tableCell, this.direction, tableUtils );
+			getVerticalCell( tableCell, this.direction );
 
 		if ( !cellToMerge ) {
 			return;
@@ -154,7 +156,6 @@ export default class MergeCellCommand extends Command {
 //
 // @param {module:engine/model/element~Element} tableCell
 // @param {String} direction
-// @param {module:table/tableutils~TableUtils} tableUtils
 // @returns {module:engine/model/node~Node|null}
 function getHorizontalCell( tableCell, direction, tableUtils ) {
 	const tableRow = tableCell.parent;
@@ -195,16 +196,15 @@ function getHorizontalCell( tableCell, direction, tableUtils ) {
 //
 // @param {module:engine/model/element~Element} tableCell
 // @param {String} direction
-// @param {module:table/tableutils~TableUtils} tableUtils
 // @returns {module:engine/model/node~Node|null}
-function getVerticalCell( tableCell, direction, tableUtils ) {
+function getVerticalCell( tableCell, direction ) {
 	const tableRow = tableCell.parent;
 	const table = tableRow.parent;
 
 	const rowIndex = table.getChildIndex( tableRow );
 
 	// Don't search for mergeable cell if direction points out of the table.
-	if ( ( direction == 'down' && rowIndex === tableUtils.getRows( table ) - 1 ) || ( direction == 'up' && rowIndex === 0 ) ) {
+	if ( ( direction == 'down' && rowIndex === table.childCount - 1 ) || ( direction == 'up' && rowIndex === 0 ) ) {
 		return;
 	}
 
@@ -227,7 +227,7 @@ function getVerticalCell( tableCell, direction, tableUtils ) {
 	const currentCellData = tableMap.find( value => value.cell === tableCell );
 	const mergeColumn = currentCellData.column;
 
-	const cellToMergeData = tableMap.find( ( { row, cellHeight, column } ) => {
+	const cellToMergeData = tableMap.find( ( { row, rowspan, column } ) => {
 		if ( column !== mergeColumn ) {
 			return false;
 		}
@@ -237,7 +237,7 @@ function getVerticalCell( tableCell, direction, tableUtils ) {
 			return row === rowOfCellToMerge;
 		} else {
 			// If merging a cell above calculate if it spans to mergeRow.
-			return rowOfCellToMerge === row + cellHeight;
+			return rowOfCellToMerge === row + rowspan;
 		}
 	} );
 
@@ -269,5 +269,5 @@ function mergeTableCells( cellToRemove, cellToExpand, writer ) {
 // @param {module:engine/model/element~Element} tableCell
 // @returns {Boolean}
 function isEmpty( tableCell ) {
-	return tableCell.childCount == 1 && tableCell.getChild( 0 ).is( 'element', 'paragraph' ) && tableCell.getChild( 0 ).isEmpty;
+	return tableCell.childCount == 1 && tableCell.getChild( 0 ).is( 'paragraph' ) && tableCell.getChild( 0 ).isEmpty;
 }

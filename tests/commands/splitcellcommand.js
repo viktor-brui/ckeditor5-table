@@ -1,17 +1,16 @@
 /**
- * @license Copyright (c) 2003-2022, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
 import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
 
-import TableEditing from '../../src/tableediting';
-import TableSelection from '../../src/tableselection';
-import { modelTable } from '../_utils/utils';
-
 import SplitCellCommand from '../../src/commands/splitcellcommand';
+import { defaultConversion, defaultSchema, modelTable } from '../_utils/utils';
+import TableSelection from '../../src/tableselection';
+import TableUtils from '../../src/tableutils';
+import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 
 describe( 'SplitCellCommand', () => {
 	let editor, model, command;
@@ -19,12 +18,15 @@ describe( 'SplitCellCommand', () => {
 	beforeEach( () => {
 		return ModelTestEditor
 			.create( {
-				plugins: [ Paragraph, TableEditing, TableSelection ]
+				plugins: [ TableUtils, TableSelection ]
 			} )
 			.then( newEditor => {
 				editor = newEditor;
 				model = editor.model;
 				command = new SplitCellCommand( editor );
+
+				defaultSchema( model.schema );
+				defaultConversion( editor.conversion );
 			} );
 	} );
 
@@ -94,7 +96,7 @@ describe( 'SplitCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', { colspan: 2, contents: '01' }, '02' ],
 					[ '10', '[]11', '', '12' ],
 					[ '20', { colspan: 3, contents: '21' } ],
@@ -112,7 +114,7 @@ describe( 'SplitCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ],
 					[ '20', '21[]', '' ],
@@ -128,7 +130,7 @@ describe( 'SplitCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '01', '02' ],
 					[ { colspan: 2, contents: '10[]' }, '' ]
 				] ) );
@@ -142,7 +144,7 @@ describe( 'SplitCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '01', '02', '03' ],
 					[ { colspan: 2, contents: '10[]' }, { colspan: 2, contents: '' } ]
 				] ) );
@@ -157,7 +159,7 @@ describe( 'SplitCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '01', '02', '03', '04', '05' ],
 					[ { colspan: 3, rowspan: 2, contents: '10[]' }, { colspan: 2, rowspan: 2, contents: '' }, '15' ],
 					[ '25' ]
@@ -197,7 +199,7 @@ describe( 'SplitCellCommand', () => {
 
 				command.execute();
 
-				expect( getData( model ) ).to.equalMarkup( modelTable( [
+				assertEqualMarkup( getData( model ), modelTable( [
 					[ '00', '01', '02' ],
 					[ { rowspan: 2, contents: '10' }, '[]11', { rowspan: 2, contents: '12' } ],
 					[ '' ],
