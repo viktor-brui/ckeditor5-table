@@ -96,6 +96,42 @@ msgctxt "Label for the table properties button."
 msgid "Table properties"
 msgstr "Свойства таблицы"
 
+msgctxt "Label for the table border input."
+msgid "None"
+msgstr "Нет"
+
+msgctxt "Label for the table border input."
+msgid "Solid"
+msgstr "Сплошной"
+
+msgctxt "Label for the table border input."
+msgid "Dotted"
+msgstr "Точечный"
+
+msgctxt "Label for the table border input."
+msgid "Dashed"
+msgstr "Пунктирный"
+
+msgctxt "Label for the table border input."
+msgid "Double"
+msgstr "Двойной"
+
+msgctxt "Label for the table border input."
+msgid "Groove"
+msgstr "Углубленный"
+
+msgctxt "Label for the table border input."
+msgid "Ridge"
+msgstr "Ребристый"
+
+msgctxt "Label for the table border input."
+msgid "Inset"
+msgstr "Вставной"
+
+msgctxt "Label for the table border input."
+msgid "Outset"
+msgstr "Выпухлый"
+
 msgctxt "The label used by assistive technologies describing a table toolbar attached to a table widget."
 msgid "Table toolbar"
 msgstr ""
