@@ -92,6 +92,10 @@ msgctxt "Label for the cell properties button."
 msgid "Cell properties"
 msgstr "Свойства ячейки"
 
+msgctxt "Label for the table properties button."
+msgid "Table properties"
+msgstr "Свойства таблицы"
+
 msgctxt "The label used by assistive technologies describing a table toolbar attached to a table widget."
 msgid "Table toolbar"
 msgstr ""
