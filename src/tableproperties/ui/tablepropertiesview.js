@@ -273,7 +273,7 @@ export default class TablePropertiesView extends View {
 
 		// Form header.
 		this.children.add( new FormHeaderView( locale, {
-			label: this.t( 'Table properties' )
+			label: this.t( 'Свойства таблицы' )
 		} ) );
 
 		// Border row.

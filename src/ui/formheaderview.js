@@ -59,7 +59,6 @@ export default class FormHeaderView extends View {
 		this.set( 'label', options.label || '' );
 
 		const label = new View( locale );
-		const t = this.editor.t();
 
 		label.setTemplate( {
 			tag: 'span',
@@ -70,7 +69,7 @@ export default class FormHeaderView extends View {
 				],
 			},
 			children: [
-				{ text: bind.to( t( 'label' )) }
+				{ text: bind.to( 'label' ) }
 			]
 		} );
 

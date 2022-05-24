@@ -103,7 +103,7 @@ export default class TableCellPropertiesUI extends Plugin {
 			const view = new ButtonView( locale );
 
 			view.set( {
-				label: t( 'Cell properties' ),
+				label: t( 'Свойства ячейки' ),
 				icon: tableCellProperties,
 				tooltip: true
 			} );
