@@ -132,6 +132,14 @@ msgctxt "Label for the table border input."
 msgid "Outset"
 msgstr "Выпухлый"
 
+msgctxt "Label for the table border input."
+msgid "Remove color"
+msgstr "Убрать цвет"
+
+msgctxt "Label for the table border input."
+msgid "Style"
+msgstr "Стиль"
+
 msgctxt "The label used by assistive technologies describing a table toolbar attached to a table widget."
 msgid "Table toolbar"
 msgstr ""
