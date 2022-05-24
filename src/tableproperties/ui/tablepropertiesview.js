@@ -407,14 +407,14 @@ export default class TablePropertiesView extends View {
 		// -- Group label ---------------------------------------------
 
 		const borderRowLabel = new LabelView( locale );
-		borderRowLabel.text = t( 'Border' );
+		borderRowLabel.text = t( 'Граница' );
 
 		// -- Style ---------------------------------------------------
 
 		const styleLabels = getBorderStyleLabels( this.t );
 		const borderStyleDropdown = new LabeledView( locale, createLabeledDropdown );
 		borderStyleDropdown.set( {
-			label: t( 'Style' ),
+			label: t( 'Стиль' ),
 			class: 'ck-table-form__border-style'
 		} );
 
@@ -439,7 +439,7 @@ export default class TablePropertiesView extends View {
 		const borderWidthInput = new LabeledView( locale, createLabeledInputText );
 
 		borderWidthInput.set( {
-			label: t( 'Width' ),
+			label: t( 'Ширина' ),
 			class: 'ck-table-form__border-width'
 		} );
 
@@ -454,7 +454,7 @@ export default class TablePropertiesView extends View {
 		const borderColorInput = new LabeledView( locale, colorInputCreator );
 
 		borderColorInput.set( {
-			label: t( 'Color' ),
+			label: t( 'Цвет' ),
 			class: 'ck-table-form__border-color',
 		} );
 
@@ -501,7 +501,7 @@ export default class TablePropertiesView extends View {
 		const backgroundInput = new LabeledView( locale, backgroundInputCreator );
 
 		backgroundInput.set( {
-			label: t( 'Background' ),
+			label: t( 'Фон' ),
 			class: 'ck-table-properties-form__background',
 		} );
 
@@ -529,14 +529,14 @@ export default class TablePropertiesView extends View {
 		// -- Label ---------------------------------------------------
 
 		const dimensionsLabel = new LabelView( locale );
-		dimensionsLabel.text = t( 'Dimensions' );
+		dimensionsLabel.text = t( 'Размеры' );
 
 		// -- Width ---------------------------------------------------
 
 		const widthInput = new LabeledView( locale, createLabeledInputText );
 
 		widthInput.set( {
-			label: t( 'Width' ),
+			label: t( 'Ширина' ),
 			class: 'ck-table-form__dimensions-row__width',
 		} );
 
@@ -565,7 +565,7 @@ export default class TablePropertiesView extends View {
 		const heightInput = new LabeledView( locale, createLabeledInputText );
 
 		heightInput.set( {
-			label: t( 'Height' ),
+			label: t( 'Высота' ),
 			class: 'ck-table-form__dimensions-row__height',
 		} );
 
@@ -597,14 +597,14 @@ export default class TablePropertiesView extends View {
 		// -- Label ---------------------------------------------------
 
 		const alignmentLabel = new LabelView( locale );
-		alignmentLabel.text = t( 'Alignment' );
+		alignmentLabel.text = t( 'Выравнивание' );
 
 		// -- Toolbar ---------------------------------------------------
 
 		const alignmentToolbar = new ToolbarView( locale );
 		alignmentToolbar.set( {
 			isCompact: true,
-			ariaLabel: t( 'Table alignment toolbar' )
+			ariaLabel: t( 'Панель инструментов выравнивания таблицы' )
 		} );
 
 		fillToolbar( {
@@ -684,9 +684,9 @@ export default class TablePropertiesView extends View {
 		const t = this.t;
 
 		return {
-			left: t( 'Align table to the left' ),
-			center: t( 'Center table' ),
-			right: t( 'Align table to the right' )
+			left: t( 'Выровнять таблицу по левому краю' ),
+			center: t( 'Выровнять таблицу по центру' ),
+			right: t( 'Выровнять таблицу по правому краю' )
 		};
 	}
 }
