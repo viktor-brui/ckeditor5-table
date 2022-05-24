@@ -88,6 +88,10 @@ msgctxt "Label for the merge table cells button."
 msgid "Merge cells"
 msgstr "Объединить ячейки"
 
+msgctxt "Label for the cell properties button."
+msgid "Cell properties"
+msgstr "Свойства ячейки"
+
 msgctxt "The label used by assistive technologies describing a table toolbar attached to a table widget."
 msgid "Table toolbar"
 msgstr ""
