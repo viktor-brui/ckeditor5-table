@@ -12,10 +12,7 @@ import TableCellPropertiesUI from './tablecellproperties/tablecellpropertiesui';
 import TableCellPropertiesEditing from './tablecellproperties/tablecellpropertiesediting';
 
 /**
- * The table cell properties feature. Enables support for setting properties of table cells (size, border, background, etc.).
- *
- * Read more in the {@glink features/table#table-and-cell-styling-tools Table and cell styling tools} section.
- * See also the {@link module:table/tableproperties~TableProperties} plugin.
+ * The table cell properties feature.
  *
  * This is a "glue" plugin that loads the
  * {@link module:table/tablecellproperties/tablecellpropertiesediting~TableCellPropertiesEditing table cell properties editing feature} and

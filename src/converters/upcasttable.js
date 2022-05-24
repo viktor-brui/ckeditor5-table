@@ -52,11 +52,11 @@ export default function upcastTable() {
 			conversionApi.writer.insert( table, splitResult.position );
 			conversionApi.consumable.consume( viewTable, { name: true } );
 
-			// Upcast table rows in proper order (heading rows first).
-			rows.forEach( row => conversionApi.convertItem( row, conversionApi.writer.createPositionAt( table, 'end' ) ) );
-
-			// Create one row and one table cell for empty table.
-			if ( table.isEmpty ) {
+			if ( rows.length ) {
+				// Upcast table rows in proper order (heading rows first).
+				rows.forEach( row => conversionApi.convertItem( row, conversionApi.writer.createPositionAt( table, 'end' ) ) );
+			} else {
+				// Create one row and one table cell for empty table.
 				const row = conversionApi.writer.createElement( 'tableRow' );
 				conversionApi.writer.insert( row, conversionApi.writer.createPositionAt( table, 'end' ) );
 
@@ -87,23 +87,6 @@ export default function upcastTable() {
 				data.modelCursor = data.modelRange.end;
 			}
 		} );
-	};
-}
-
-/**
- * Conversion helper that skips empty <tr> from upcasting.
- *
- * Empty row is considered a table model error.
- *
- * @returns {Function} Conversion helper.
- */
-export function skipEmptyTableRow() {
-	return dispatcher => {
-		dispatcher.on( 'element:tr', ( evt, data ) => {
-			if ( data.viewItem.isEmpty ) {
-				evt.stop();
-			}
-		}, { priority: 'high' } );
 	};
 }
 

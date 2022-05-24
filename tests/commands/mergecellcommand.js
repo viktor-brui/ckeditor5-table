@@ -95,46 +95,44 @@ describe( 'MergeCellCommand', () => {
 				expect( command.isEnabled ).to.be.false;
 			} );
 
-			describe( 'when the heading section is in the table', () => {
-				it( 'should be false if mergeable cell is in other table section then current cell', () => {
-					setData( model, modelTable( [
-						[ '00[]', '01' ]
-					], { headingColumns: 1 } ) );
+			it( 'should be false if mergeable cell is in other table section then current cell', () => {
+				setData( model, modelTable( [
+					[ '00[]', '01' ]
+				], { headingColumns: 1 } ) );
 
-					expect( command.isEnabled ).to.be.false;
-				} );
+				expect( command.isEnabled ).to.be.false;
+			} );
 
-				it( 'should be true if merged cell would not cross heading section (mergeable cell with colspan)', () => {
-					setData( model, modelTable( [
-						[ '00[]', { colspan: 2, contents: '01' }, '02', '03' ]
-					], { headingColumns: 3 } ) );
+			it( 'should be false if merged cell would cross heading section (mergeable cell with colspan)', () => {
+				setData( model, modelTable( [
+					[ '00[]', { colspan: 2, contents: '01' }, '02', '03' ]
+				], { headingColumns: 2 } ) );
 
-					expect( command.isEnabled ).to.be.true;
-				} );
+				expect( command.isEnabled ).to.be.false;
+			} );
 
-				it( 'should be false if merged cell would cross heading section (current cell with colspan)', () => {
-					setData( model, modelTable( [
-						[ { colspan: 2, contents: '00[]' }, '01', '02', '03' ]
-					], { headingColumns: 2 } ) );
+			it( 'should be true if merged cell would not cross heading section (mergeable cell with colspan)', () => {
+				setData( model, modelTable( [
+					[ '00[]', { colspan: 2, contents: '01' }, '02', '03' ]
+				], { headingColumns: 3 } ) );
 
-					expect( command.isEnabled ).to.be.false;
-				} );
+				expect( command.isEnabled ).to.be.true;
+			} );
 
-				it( 'should be true if merged cell would not cross heading section (current cell with colspan)', () => {
-					setData( model, modelTable( [
-						[ { colspan: 2, contents: '00[]' }, '01', '02', '03' ]
-					], { headingColumns: 3 } ) );
+			it( 'should be false if merged cell would cross heading section (current cell with colspan)', () => {
+				setData( model, modelTable( [
+					[ { colspan: 2, contents: '00[]' }, '01', '02', '03' ]
+				], { headingColumns: 2 } ) );
 
-					expect( command.isEnabled ).to.be.true;
-				} );
+				expect( command.isEnabled ).to.be.false;
+			} );
 
-				it( 'should be true if merged cell would not cross the section boundary (regular section)', () => {
-					setData( model, modelTable( [
-						[ '00', '01', '02[]', '03' ]
-					], { headingColumns: 1 } ) );
+			it( 'should be true if merged cell would not cross heading section (current cell with colspan)', () => {
+				setData( model, modelTable( [
+					[ { colspan: 2, contents: '00[]' }, '01', '02', '03' ]
+				], { headingColumns: 3 } ) );
 
-					expect( command.isEnabled ).to.be.true;
-				} );
+				expect( command.isEnabled ).to.be.true;
 			} );
 		} );
 
@@ -317,38 +315,20 @@ describe( 'MergeCellCommand', () => {
 				expect( command.isEnabled ).to.be.false;
 			} );
 
-			describe( 'when the heading section is in the table', () => {
-				it( 'should be false if mergeable cell is in other table section then current cell', () => {
-					setData( model, modelTable( [
-						[ '00', '01[]' ]
-					], { headingColumns: 1 } ) );
+			it( 'should be false if mergeable cell is in other table section then current cell', () => {
+				setData( model, modelTable( [
+					[ '00', '01[]' ],
+				], { headingColumns: 1 } ) );
 
-					expect( command.isEnabled ).to.be.false;
-				} );
+				expect( command.isEnabled ).to.be.false;
+			} );
 
-				it( 'should be false if merged cell would cross heading section (mergeable cell with colspan)', () => {
-					setData( model, modelTable( [
-						[ { colspan: 2, contents: '00' }, '02[]', '03' ]
-					], { headingColumns: 2 } ) );
+			it( 'should be false if merged cell would cross heading section (mergeable cell with colspan)', () => {
+				setData( model, modelTable( [
+					[ { colspan: 2, contents: '00' }, '02[]', '03' ]
+				], { headingColumns: 2 } ) );
 
-					expect( command.isEnabled ).to.be.false;
-				} );
-
-				it( 'should be true if merged cell would not cross the section boundary (in regular section)', () => {
-					setData( model, modelTable( [
-						[ '00', '01', '02[]', '03' ]
-					], { headingColumns: 1 } ) );
-
-					expect( command.isEnabled ).to.be.true;
-				} );
-
-				it( 'should be true if merged cell would not cross the section boundary (in heading section)', () => {
-					setData( model, modelTable( [
-						[ '00', '01[]', '02', '03' ]
-					], { headingColumns: 2 } ) );
-
-					expect( command.isEnabled ).to.be.true;
-				} );
+				expect( command.isEnabled ).to.be.false;
 			} );
 		} );
 
@@ -701,53 +681,6 @@ describe( 'MergeCellCommand', () => {
 					[ '40', '41' ]
 				] ) );
 			} );
-
-			it( 'should adjust heading rows if empty row was removed ', () => {
-				// +----+----+
-				// | 00 | 01 |
-				// +    +----+
-				// |    | 11 |
-				// +----+----+ <-- heading rows
-				// | 20 | 21 |
-				// +----+----+
-				setData( model, modelTable( [
-					[ { contents: '00', rowspan: 2 }, '[]01' ],
-					[ '11' ],
-					[ '20', '21' ]
-				], { headingRows: 2 } ) );
-
-				command.execute();
-
-				assertEqualMarkup( getData( model ), modelTable( [
-					[ '00', '<paragraph>[01</paragraph><paragraph>11]</paragraph>' ],
-					[ '20', '21' ]
-				], { headingRows: 1 } ) );
-			} );
-
-			it( 'should create one undo step (1 batch)', () => {
-				// +----+----+
-				// | 00 | 01 |
-				// +    +----+
-				// |    | 11 |
-				// +----+----+ <-- heading rows
-				// | 20 | 21 |
-				// +----+----+
-				setData( model, modelTable( [
-					[ { contents: '00', rowspan: 2 }, '[]01' ],
-					[ '11' ],
-					[ '20', '21' ]
-				], { headingRows: 2 } ) );
-
-				const createdBatches = new Set();
-
-				model.on( 'applyOperation', ( evt, [ operation ] ) => {
-					createdBatches.add( operation.batch );
-				} );
-
-				command.execute();
-
-				expect( createdBatches.size ).to.equal( 1 );
-			} );
 		} );
 	} );
 
@@ -1005,53 +938,6 @@ describe( 'MergeCellCommand', () => {
 					[ '20', '<paragraph>[21</paragraph><paragraph>31]</paragraph>', { rowspan: 2, contents: '22' } ],
 					[ '40', '41' ]
 				] ) );
-			} );
-
-			it( 'should adjust heading rows if empty row was removed ', () => {
-				// +----+----+
-				// | 00 | 01 |
-				// +    +----+
-				// |    | 11 |
-				// +----+----+ <-- heading rows
-				// | 20 | 21 |
-				// +----+----+
-				setData( model, modelTable( [
-					[ { contents: '00', rowspan: 2 }, '01' ],
-					[ '[]11' ],
-					[ '20', '21' ]
-				], { headingRows: 2 } ) );
-
-				command.execute();
-
-				assertEqualMarkup( getData( model ), modelTable( [
-					[ '00', '<paragraph>[01</paragraph><paragraph>11]</paragraph>' ],
-					[ '20', '21' ]
-				], { headingRows: 1 } ) );
-			} );
-
-			it( 'should create one undo step (1 batch)', () => {
-				// +----+----+
-				// | 00 | 01 |
-				// +    +----+
-				// |    | 11 |
-				// +----+----+ <-- heading rows
-				// | 20 | 21 |
-				// +----+----+
-				setData( model, modelTable( [
-					[ { contents: '00', rowspan: 2 }, '01' ],
-					[ '[]11' ],
-					[ '20', '21' ]
-				], { headingRows: 2 } ) );
-
-				const createdBatches = new Set();
-
-				model.on( 'applyOperation', ( evt, [ operation ] ) => {
-					createdBatches.add( operation.batch );
-				} );
-
-				command.execute();
-
-				expect( createdBatches.size ).to.equal( 1 );
 			} );
 		} );
 	} );

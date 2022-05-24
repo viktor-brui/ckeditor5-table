@@ -10,8 +10,7 @@
 import Command from '@ckeditor/ckeditor5-core/src/command';
 
 import TableWalker from '../tablewalker';
-import { getColumnIndexes, getSelectionAffectedTableCells } from '../utils';
-import { findAncestor } from './utils';
+import { findAncestor, updateNumericAttribute } from './utils';
 
 /**
  * The remove column command.
@@ -29,95 +28,53 @@ export default class RemoveColumnCommand extends Command {
 	 * @inheritDoc
 	 */
 	refresh() {
-		const selectedCells = getSelectionAffectedTableCells( this.editor.model.document.selection );
-		const firstCell = selectedCells[ 0 ];
+		const editor = this.editor;
+		const selection = editor.model.document.selection;
+		const tableUtils = editor.plugins.get( 'TableUtils' );
 
-		if ( firstCell ) {
-			const table = findAncestor( 'table', firstCell );
-			const tableColumnCount = this.editor.plugins.get( 'TableUtils' ).getColumns( table );
+		const tableCell = findAncestor( 'tableCell', selection.getFirstPosition() );
 
-			const { first, last } = getColumnIndexes( selectedCells );
-
-			this.isEnabled = last - first < ( tableColumnCount - 1 );
-		} else {
-			this.isEnabled = false;
-		}
+		this.isEnabled = !!tableCell && tableUtils.getColumns( tableCell.parent.parent ) > 1;
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	execute() {
-		const [ firstCell, lastCell ] = getBoundaryCells( this.editor.model.document.selection );
-		const table = firstCell.parent.parent;
+		const model = this.editor.model;
+		const selection = model.document.selection;
+
+		const firstPosition = selection.getFirstPosition();
+
+		const tableCell = findAncestor( 'tableCell', firstPosition );
+		const tableRow = tableCell.parent;
+		const table = tableRow.parent;
+
+		const headingColumns = table.getAttribute( 'headingColumns' ) || 0;
+		const row = table.getChildIndex( tableRow );
 
 		// Cache the table before removing or updating colspans.
 		const tableMap = [ ...new TableWalker( table ) ];
 
-		// Store column indexes of removed columns.
-		const removedColumnIndexes = {
-			first: tableMap.find( value => value.cell === firstCell ).column,
-			last: tableMap.find( value => value.cell === lastCell ).column
-		};
+		// Get column index of removed column.
+		const cellData = tableMap.find( value => value.cell === tableCell );
+		const removedColumn = cellData.column;
 
-		const cellToFocus = getCellToFocus( tableMap, firstCell, lastCell, removedColumnIndexes );
+		model.change( writer => {
+			// Update heading columns attribute if removing a row from head section.
+			if ( headingColumns && row <= headingColumns ) {
+				writer.setAttribute( 'headingColumns', headingColumns - 1, table );
+			}
 
-		this.editor.model.change( writer => {
-			const columnsToRemove = removedColumnIndexes.last - removedColumnIndexes.first + 1;
-
-			this.editor.plugins.get( 'TableUtils' ).removeColumns( table, {
-				at: removedColumnIndexes.first,
-				columns: columnsToRemove
-			} );
-
-			writer.setSelection( writer.createPositionAt( cellToFocus, 0 ) );
+			for ( const { cell, column, colspan } of tableMap ) {
+				// If colspaned cell overlaps removed column decrease it's span.
+				if ( column <= removedColumn && colspan > 1 && column + colspan > removedColumn ) {
+					updateNumericAttribute( 'colspan', colspan - 1, cell, writer );
+				} else if ( column === removedColumn ) {
+					// The cell in removed column has colspan of 1.
+					writer.remove( cell );
+				}
+			}
 		} );
 	}
-}
-
-// Returns a proper table cell to focus after removing a column.
-// - selection is on last table cell it will return previous cell.
-function getCellToFocus( tableMap, firstCell, lastCell, removedColumnIndexes ) {
-	const colspan = parseInt( lastCell.getAttribute( 'colspan' ) || 1 );
-
-	// If the table cell is spanned over 2+ columns - it will be truncated so the selection should
-	// stay in that cell.
-	if ( colspan > 1 ) {
-		return lastCell;
-	}
-	// Normally, look for the cell in the same row that precedes the first cell to put selection there ("column on the left").
-	// If the deleted column is the first column of the table, there will be no predecessor: use the cell
-	// from the column that follows then (also in the same row).
-	else if ( firstCell.previousSibling || lastCell.nextSibling ) {
-		return lastCell.nextSibling || firstCell.previousSibling;
-	}
-	// It can happen that table cells have no siblings in a row, for instance, when there are row spans
-	// in the table (in the previous row). Then just look for the closest cell that is in a column
-	// that will not be removed to put the selection there.
-	else {
-		// Look for any cell in a column that precedes the first removed column.
-		if ( removedColumnIndexes.first ) {
-			return tableMap.reverse().find( ( { column } ) => {
-				return column < removedColumnIndexes.first;
-			} ).cell;
-		}
-		// If the first removed column is the first column of the table, then
-		// look for any cell that is in a column that follows the last removed column.
-		else {
-			return tableMap.reverse().find( ( { column } ) => {
-				return column > removedColumnIndexes.last;
-			} ).cell;
-		}
-	}
-}
-
-// Returns helper object returning the first and the last cell contained in given selection, based on DOM order.
-function getBoundaryCells( selection ) {
-	const referenceCells = getSelectionAffectedTableCells( selection );
-	const firstCell = referenceCells[ 0 ];
-	const lastCell = referenceCells.pop();
-
-	const returnValue = [ firstCell, lastCell ];
-
-	return firstCell.isBefore( lastCell ) ? returnValue : returnValue.reverse();
 }

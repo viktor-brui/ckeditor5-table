@@ -180,32 +180,6 @@ describe( 'upcastTable()', () => {
 		);
 	} );
 
-	it( 'should create valid table model from all empty rows', () => {
-		editor.setData(
-			'<table>' +
-				'<tr></tr>' +
-				'<tr></tr>' +
-			'</table>'
-		);
-
-		expectModel(
-			'<table><tableRow><tableCell><paragraph></paragraph></tableCell></tableRow></table>'
-		);
-	} );
-
-	it( 'should skip empty table rows', () => {
-		editor.setData(
-			'<table>' +
-				'<tr></tr>' +
-				'<tr><td>bar</td></tr>' +
-			'</table>'
-		);
-
-		expectModel(
-			'<table><tableRow><tableCell><paragraph>bar</paragraph></tableCell></tableRow></table>'
-		);
-	} );
-
 	it( 'should skip unknown table children', () => {
 		editor.setData(
 			'<table>' +
@@ -230,6 +204,7 @@ describe( 'upcastTable()', () => {
 	} );
 
 	it( 'should fix if inside other blocks', () => {
+		// Using <div> instead of <p> as it breaks on Edge.
 		editor.model.schema.register( 'div', {
 			inheritAllFrom: '$block'
 		} );

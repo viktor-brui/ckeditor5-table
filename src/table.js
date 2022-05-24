@@ -11,9 +11,6 @@ import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
 
 import TableEditing from './tableediting';
 import TableUI from './tableui';
-import TableSelection from './tableselection';
-import TableClipboard from './tableclipboard';
-import TableNavigation from './tablenavigation';
 import Widget from '@ckeditor/ckeditor5-widget/src/widget';
 
 import '../theme/table.css';
@@ -23,13 +20,8 @@ import '../theme/table.css';
  *
  * For a detailed overview, check the {@glink features/table Table feature documentation}.
  *
- * This is a "glue" plugin that loads the following table features:
- *
- * * {@link module:table/tableediting~TableEditing editing feature},
- * * {@link module:table/tableselection~TableSelection selection feature},
- * * {@link module:table/tablenavigation~TableNavigation keyboard navigation feature},
- * * {@link module:table/tableclipboard~TableClipboard clipboard feature},
- * * {@link module:table/tableui~TableUI UI feature}.
+ * This is a "glue" plugin that loads the {@link module:table/tableediting~TableEditing table editing feature}
+ * and {@link module:table/tableui~TableUI table UI feature}.
  *
  * @extends module:core/plugin~Plugin
  */
@@ -38,7 +30,7 @@ export default class Table extends Plugin {
 	 * @inheritDoc
 	 */
 	static get requires() {
-		return [ TableEditing, TableUI, TableSelection, TableClipboard, TableNavigation, Widget ];
+		return [ TableEditing, TableUI, Widget ];
 	}
 
 	/**

@@ -9,8 +9,7 @@
 
 import Command from '@ckeditor/ckeditor5-core/src/command';
 
-import { findAncestor, isHeadingColumnCell, updateNumericAttribute } from './utils';
-import { getColumnIndexes, getSelectionAffectedTableCells, getHorizontallyOverlappingCells, splitVertically } from '../utils';
+import { findAncestor, updateNumericAttribute } from './utils';
 
 /**
  * The header column command.
@@ -33,9 +32,13 @@ export default class SetHeaderColumnCommand extends Command {
 	 */
 	refresh() {
 		const model = this.editor.model;
-		const selectedCells = getSelectionAffectedTableCells( model.document.selection );
-		const tableUtils = this.editor.plugins.get( 'TableUtils' );
-		const isInTable = selectedCells.length > 0;
+		const doc = model.document;
+		const selection = doc.selection;
+
+		const position = selection.getFirstPosition();
+		const tableCell = findAncestor( 'tableCell', position );
+
+		const isInTable = !!tableCell;
 
 		this.isEnabled = isInTable;
 
@@ -47,7 +50,7 @@ export default class SetHeaderColumnCommand extends Command {
 		 * @readonly
 		 * @member {Boolean} #value
 		 */
-		this.value = isInTable && selectedCells.every( cell => isHeadingColumnCell( tableUtils, cell ) );
+		this.value = isInTable && this._isInHeading( tableCell, tableCell.parent.parent );
 	}
 
 	/**
@@ -63,29 +66,44 @@ export default class SetHeaderColumnCommand extends Command {
 	 * the `forceValue` parameter instead of the current model state.
 	 */
 	execute( options = {} ) {
+		const model = this.editor.model;
+		const doc = model.document;
+		const selection = doc.selection;
+		const tableUtils = this.editor.plugins.get( 'TableUtils' );
+
+		const position = selection.getFirstPosition();
+		const tableCell = findAncestor( 'tableCell', position );
+		const tableRow = tableCell.parent;
+		const table = tableRow.parent;
+
+		const { column: selectionColumn } = tableUtils.getCellLocation( tableCell );
+
 		if ( options.forceValue === this.value ) {
 			return;
 		}
 
-		const model = this.editor.model;
-		const selectedCells = getSelectionAffectedTableCells( model.document.selection );
-		const table = findAncestor( 'table', selectedCells[ 0 ] );
-
-		const { first, last } = getColumnIndexes( selectedCells );
-		const headingColumnsToSet = this.value ? first : last + 1;
+		const headingColumnsToSet = this.value ? selectionColumn : selectionColumn + 1;
 
 		model.change( writer => {
-			if ( headingColumnsToSet ) {
-				// Changing heading columns requires to check if any of a heading cell is overlapping horizontally the table head.
-				// Any table cell that has a colspan attribute > 1 will not exceed the table head so we need to fix it in columns before.
-				const overlappingCells = getHorizontallyOverlappingCells( table, headingColumnsToSet );
-
-				for ( const { cell, column } of overlappingCells ) {
-					splitVertically( cell, column, headingColumnsToSet, writer );
-				}
-			}
-
 			updateNumericAttribute( 'headingColumns', headingColumnsToSet, table, writer, 0 );
 		} );
+	}
+
+	/**
+	 * Checks if a table cell is in the heading section.
+	 *
+	 * @param {module:engine/model/element~Element} tableCell
+	 * @param {module:engine/model/element~Element} table
+	 * @returns {Boolean}
+	 * @private
+	 */
+	_isInHeading( tableCell, table ) {
+		const headingColumns = parseInt( table.getAttribute( 'headingColumns' ) || 0 );
+
+		const tableUtils = this.editor.plugins.get( 'TableUtils' );
+
+		const { column } = tableUtils.getCellLocation( tableCell );
+
+		return !!headingColumns && column < headingColumns;
 	}
 }

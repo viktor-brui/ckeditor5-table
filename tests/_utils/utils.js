@@ -14,7 +14,6 @@ import {
 import upcastTable, { upcastTableCell } from '../../src/converters/upcasttable';
 import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
-import TableWalker from '../../src/tablewalker';
 
 const WIDGET_TABLE_CELL_CLASS = 'ck-editor__editable ck-editor__nested-editable';
 const BORDER_REG_EXP = /[\s\S]+/;
@@ -197,7 +196,7 @@ export function defaultSchema( schema, registerParagraph = true ) {
 	schema.register( 'tableCell', {
 		allowIn: 'tableRow',
 		allowAttributes: [ 'colspan', 'rowspan' ],
-		isObject: true
+		isLimit: true
 	} );
 
 	// Allow all $block content inside table cell.
@@ -323,94 +322,9 @@ export function assertTableStyle( editor, tableStyle, figureStyle ) {
 export function assertTableCellStyle( editor, tableCellStyle ) {
 	assertEqualMarkup( editor.getData(),
 		'<figure class="table"><table><tbody><tr>' +
-		`<td${ tableCellStyle ? ` style="${ tableCellStyle }"` : '' }>foo</td>` +
+			`<td${ tableCellStyle ? ` style="${ tableCellStyle }"` : '' }>foo</td>` +
 		'</tr></tbody></table></figure>'
 	);
-}
-
-/**
- * A helper method for asserting selected table cells.
- *
- * To check if a table has expected cells selected pass two dimensional array of truthy and falsy values:
- *
- *		assertSelectedCells( model, [
- *			[ 0, 1 ],
- *			[ 0, 1 ]
- *		] );
- *
- * The above call will check if table has second column selected (assuming no spans).
- *
- * **Note**: This function operates on child indexes - not rows/columns.
- *
- * Examples:
- *
- * 		+----+----+----+----+
- * 		| 00 | 01 | 02 | 03 |
- * 		+----+    +----+----+
- * 		|[10]|    |[12]|[13]|
- * 		+----+----+----+----+
- * 		| 20 | 21 | 22 | 23 |
- * 		+----+----+----+----+
- * 		| 30 | 31      | 33 |
- * 		+----+----+----+----+
- *
- * 		assertSelectedCells( model, [
- *			[ 0, 0, 0, 0 ],
- * 			[ 1,    1, 1 ],
- * 			[ 0, 0, 0, 0 ],
- *			[ 0, 0,    0 ]
- *		] );
- *
- * 		+----+----+----+----+
- * 		| 00 |[01]| 02 | 03 |
- * 		+----+    +----+----+
- * 		| 10 |    | 12 | 13 |
- * 		+----+----+----+----+
- * 		| 20 |[21]| 22 | 23 |
- * 		+----+----+----+----+
- * 		| 30 |[31]     | 33 |
- * 		+----+----+----+----+
- *
- * 		assertSelectedCells( model, [
- *			[ 0, 1, 0, 0 ],
- * 			[ 0,    0, 0 ],
- * 			[ 0, 1, 0, 0 ],
- *			[ 0, 1,    0 ]
- *		] );
- *
- */
-export function assertSelectedCells( model, tableMap ) {
-	const tableIndex = 0;
-
-	for ( let rowIndex = 0; rowIndex < tableMap.length; rowIndex++ ) {
-		const row = tableMap[ rowIndex ];
-
-		for ( let cellIndex = 0; cellIndex < row.length; cellIndex++ ) {
-			const expectSelected = row[ cellIndex ];
-
-			if ( expectSelected ) {
-				assertNodeIsSelected( model, [ tableIndex, rowIndex, cellIndex ] );
-			} else {
-				assertNodeIsNotSelected( model, [ tableIndex, rowIndex, cellIndex ] );
-			}
-		}
-	}
-}
-
-function assertNodeIsSelected( model, path ) {
-	const modelRoot = model.document.getRoot();
-	const node = modelRoot.getNodeByPath( path );
-	const selectionRanges = Array.from( model.document.selection.getRanges() );
-
-	expect( selectionRanges.some( range => range.containsItem( node ) ), `Expected node [${ path }] to be selected` ).to.be.true;
-}
-
-function assertNodeIsNotSelected( model, path ) {
-	const modelRoot = model.document.getRoot();
-	const node = modelRoot.getNodeByPath( path );
-	const selectionRanges = Array.from( model.document.selection.getRanges() );
-
-	expect( selectionRanges.every( range => !range.containsItem( node ) ), `Expected node [${ path }] to be not selected` ).to.be.true;
 }
 
 // Formats table cell attributes
@@ -442,24 +356,20 @@ function makeRows( tableData, options ) {
 				let contents = isObject ? tableCellData.contents : tableCellData;
 
 				let resultingCellElement = cellElement;
-				let isSelected = false;
 
 				if ( isObject ) {
 					if ( tableCellData.isHeading ) {
 						resultingCellElement = headingElement;
 					}
 
-					isSelected = !!tableCellData.isSelected;
-
 					delete tableCellData.contents;
 					delete tableCellData.isHeading;
-					delete tableCellData.isSelected;
 				}
 
 				const attributes = isObject ? tableCellData : {};
 
 				if ( asWidget ) {
-					attributes.class = getClassToSet( attributes );
+					attributes.class = WIDGET_TABLE_CELL_CLASS + ( attributes.class ? ` ${ attributes.class }` : '' );
 					attributes.contenteditable = 'true';
 				}
 
@@ -471,171 +381,11 @@ function makeRows( tableData, options ) {
 				}
 
 				const formattedAttributes = formatAttributes( attributes );
-				const tableCell = `<${ resultingCellElement }${ formattedAttributes }>${ contents }</${ resultingCellElement }>`;
-
-				tableRowString += isSelected ? `[${ tableCell }]` : tableCell;
+				tableRowString += `<${ resultingCellElement }${ formattedAttributes }>${ contents }</${ resultingCellElement }>`;
 
 				return tableRowString;
 			}, '' );
 
 			return `${ previousRowsString }<${ rowElement }>${ tableRowString }</${ rowElement }>`;
 		}, '' );
-}
-
-// Properly handles passed CSS class - editor do sort them.
-function getClassToSet( attributes ) {
-	return ( WIDGET_TABLE_CELL_CLASS + ( attributes.class ? ` ${ attributes.class }` : '' ) )
-		.split( ' ' )
-		.sort()
-		.join( ' ' );
-}
-
-/**
- * Returns ascii-art visualization of the table.
- *
- * @param {module:engine/model/model~Model} model The editor model.
- * @param {module:engine/model/element~Element} table The table model element.
- * @returns {String}
- */
-export function createTableAsciiArt( model, table ) {
-	const tableMap = [ ...new TableWalker( table, { includeSpanned: true } ) ];
-
-	if ( !tableMap.length ) {
-		return '';
-	}
-
-	const { row: lastRow, column: lastColumn } = tableMap[ tableMap.length - 1 ];
-	const columns = lastColumn + 1;
-
-	const headingRows = parseInt( table.getAttribute( 'headingRows' ) ) || 0;
-	const headingColumns = parseInt( table.getAttribute( 'headingColumns' ) ) || 0;
-
-	let result = '';
-
-	for ( let row = 0; row <= lastRow; row++ ) {
-		let gridLine = '';
-		let contentLine = '';
-
-		for ( let column = 0; column <= lastColumn; column++ ) {
-			const cellInfo = tableMap[ row * columns + column ];
-
-			if ( cellInfo.rowspan > 1 || cellInfo.colspan > 1 ) {
-				for ( let subRow = row; subRow < row + cellInfo.rowspan; subRow++ ) {
-					for ( let subColumn = column; subColumn < column + cellInfo.colspan; subColumn++ ) {
-						const subCellInfo = tableMap[ subRow * columns + subColumn ];
-
-						subCellInfo.isColSpan = subColumn > column;
-						subCellInfo.isRowSpan = subRow > row;
-					}
-				}
-			}
-
-			gridLine += !cellInfo.isColSpan || !cellInfo.isRowSpan ? '+' : ' ';
-			gridLine += !cellInfo.isRowSpan ? '----' : '    ';
-
-			let contents = getElementPlainText( model, cellInfo.cell ).substring( 0, 2 );
-			contents += ' '.repeat( 2 - contents.length );
-
-			contentLine += !cellInfo.isColSpan ? '|' : ' ';
-			contentLine += !cellInfo.isColSpan && !cellInfo.isRowSpan ? ` ${ contents } ` : '    ';
-
-			if ( column == lastColumn ) {
-				gridLine += '+';
-				contentLine += '|';
-
-				if ( headingRows && row == headingRows ) {
-					gridLine += ' <-- heading rows';
-				}
-			}
-		}
-		result += gridLine + '\n';
-		result += contentLine + '\n';
-
-		if ( row == lastRow ) {
-			result += `+${ '----+'.repeat( columns ) }`;
-
-			if ( headingRows && row == headingRows - 1 ) {
-				result += ' <-- heading rows';
-			}
-
-			if ( headingColumns > 0 ) {
-				result += `\n${ '     '.repeat( headingColumns ) }^-- heading columns`;
-			}
-		}
-	}
-
-	return result;
-}
-
-/**
- * Generates input data for `modelTable` helper method.
- *
- * @param {module:engine/model/model~Model} model The editor model.
- * @param {module:engine/model/element~Element} table The table model element.
- * @returns {Array.<Array.<String|Object>>}
- */
-export function prepareModelTableInput( model, table ) {
-	const result = [];
-	let row = [];
-
-	for ( const cellInfo of new TableWalker( table, { includeSpanned: true } ) ) {
-		if ( cellInfo.column == 0 && cellInfo.row > 0 ) {
-			result.push( row );
-			row = [];
-		}
-
-		if ( cellInfo.isSpanned ) {
-			continue;
-		}
-
-		const contents = getElementPlainText( model, cellInfo.cell );
-
-		if ( cellInfo.colspan > 1 || cellInfo.rowspan > 1 ) {
-			row.push( {
-				contents,
-				...( cellInfo.colspan > 1 ? { colspan: cellInfo.colspan } : null ),
-				...( cellInfo.rowspan > 1 ? { rowspan: cellInfo.rowspan } : null )
-			} );
-		} else {
-			row.push( contents );
-		}
-	}
-
-	result.push( row );
-
-	return result;
-}
-
-/**
- * Pretty formats `modelTable` input data.
- *
- * @param {Array.<Array.<String|Object>>} data
- * @returns {String}
- */
-export function prettyFormatModelTableInput( data ) {
-	const rowsStringified = data.map( row => {
-		const cellsStringified = row.map( cell => {
-			if ( typeof cell == 'string' ) {
-				return `'${ cell }'`;
-			}
-
-			const fieldsStringified = Object.entries( cell ).map( ( [ key, value ] ) => {
-				return `${ key }: ${ typeof value == 'string' ? `'${ value }'` : value }`;
-			} );
-
-			return `{ ${ fieldsStringified.join( ', ' ) } }`;
-		} );
-
-		return '\t[ ' + cellsStringified.join( ', ' ) + ' ]';
-	} );
-
-	return `[\n${ rowsStringified.join( ',\n' ) }\n]`;
-}
-
-// Returns all the text content from element.
-function getElementPlainText( model, element ) {
-	return [ ...model.createRangeIn( element ).getWalker() ]
-		.filter( ( { type } ) => type == 'text' )
-		.map( ( { item: { data } } ) => data )
-		.join( '' );
 }

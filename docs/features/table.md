@@ -31,15 +31,6 @@ Put the caret anywhere inside the table and click the **"Table properties"** but
 	By default, table styling tools are not included in the {@link builds/guides/overview ready–to–use editor builds} and must be installed separately. See the [installation](#table-and-cell-styling-tools-2) section to learn how to enable them in your editor.
 </info-box>
 
-## Table selection
-
-The {@link module:table/tableselection~TableSelection} plugin introduces support for the custom selection system for tables that lets you:
-
-* Select an arbitrary rectangular table fragment &mdash; a few cells from different rows, a column (or a few of them) or a row (or multiple rows).
-* Apply formatting or add a link to all selected cells at once.
-
-The table selection plugin is loaded automatically by the `Table` plugin and can be tested in the [demos above](#demos).
-
 ## Installation
 
 ### Basic table features
@@ -335,7 +326,7 @@ The table plugins register the following UI components:
 			<td>The <code>'tableRow'</code> dropdown</td>
 		</tr>
 		<tr>
-			<td>The <code>'mergeTableCells'</code> split button</td>
+			<td>The <code>'mergeTableCells'</code> dropdown</td>
 		</tr>
 		<tr>
 			<td>The <code>'tableProperties'</code> button</td>
@@ -351,7 +342,7 @@ The table plugins register the following UI components:
 #### Toolbars
 
 The {@link module:table/tabletoolbar~TableToolbar} plugin introduces two balloon toolbars for tables.
-* The content toolbar shows up when a table cell is selected and it is anchored to the table. It is possible to {@link module:table/table~TableConfig#contentToolbar configure} its content. Normally, the toolbar contains the table-related tools such as `'tableColumn'` and `'tableRow'` dropdowns and `'mergeTableCells'` split button.
+* The content toolbar shows up when a table cell is selected and it is anchored to the table. It is possible to {@link module:table/table~TableConfig#contentToolbar configure} its content. Normally, the toolbar contains the table-related tools such as `'tableColumn'`, `'tableRow'`, and `'mergeTableCells'` dropdowns.
 * The table toolbar shows up when the whole table is selected, for instance using the widget handler. It is possible to {@link module:table/table~TableConfig#tableToolbar configure} its content.
 
 ### Editor commands
@@ -393,14 +384,6 @@ The {@link module:table/tabletoolbar~TableToolbar} plugin introduces two balloon
 		<tr>
 			<td><code>'removeTableRow'</code></td>
 			<td>{@link module:table/commands/removerowcommand~RemoveRowCommand}</td>
-		</tr>
-		<tr>
-			<td><code>'selectTableColumn'</code></td>
-			<td>{@link module:table/commands/selectcolumncommand~SelectColumnCommand}</td>
-		</tr>
-		<tr>
-			<td><code>'selectTableRow'</code></td>
-			<td>{@link module:table/commands/selectrowcommand~SelectRowCommand}</td>
 		</tr>
 		<tr>
 			<td><code>'setTableColumnHeader'</code></td>
@@ -509,4 +492,4 @@ The {@link module:table/tabletoolbar~TableToolbar} plugin introduces two balloon
 
 ## Contribute
 
-The source code of the feature is available on GitHub in https://github.com/ckeditor/ckeditor5/tree/master/packages/ckeditor5-table.
+The source code of the feature is available on GitHub in https://github.com/ckeditor/ckeditor5-table.

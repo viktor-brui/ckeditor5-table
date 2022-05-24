@@ -26,26 +26,12 @@
 		& th {
 			min-width: 2em;
 			padding: .4em;
-
-			/* The border is inherited from .ck-editor__nested-editable styles, so theoretically it's not necessary here.
-			However, the border is a content style, so it should use .ck-content (so it works outside the editor).
-			Hence, the duplication. See https://github.com/ckeditor/ckeditor5/issues/6314 */
-			border: 1px solid hsl(0, 0%, 75%);
+			border-color: hsl(0, 0%, 85%);
 		}
 
 		& th {
 			font-weight: bold;
-			background: hsla(0, 0%, 0%, 5%);
+			background: hsl(0, 0%, 98%);
 		}
 	}
-}
-
-/* Text alignment of the table header should match the editor settings and override the native browser styling,
-when content is available outside the ediitor. See https://github.com/ckeditor/ckeditor5/issues/6638 */
-.ck-content[dir="rtl"] .table th {
-	text-align: right;
-}
-
-.ck-content[dir="ltr"] .table th {
-	text-align: left;
 }

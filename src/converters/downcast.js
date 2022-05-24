@@ -209,6 +209,9 @@ export function downcastTableHeadingRowsChange( options = {} ) {
 					renameViewTableCell( tableCell, 'th', conversionApi, asWidget );
 				}
 			}
+
+			// Cleanup: this will remove any empty section from the view which may happen when moving all rows from a table section.
+			removeTableSectionIfEmpty( 'tbody', viewTable, conversionApi );
 		}
 		// The head section has shrunk so move rows from <thead> to <tbody>.
 		else {
@@ -231,11 +234,10 @@ export function downcastTableHeadingRowsChange( options = {} ) {
 			for ( const tableWalkerValue of tableWalker ) {
 				renameViewTableCellIfRequired( tableWalkerValue, tableAttributes, conversionApi, asWidget );
 			}
-		}
 
-		// Cleanup: Ensure that thead & tbody sections are removed if left empty after moving rows. See #6437, #6391.
-		removeTableSectionIfEmpty( 'thead', viewTable, conversionApi );
-		removeTableSectionIfEmpty( 'tbody', viewTable, conversionApi );
+			// Cleanup: this will remove any empty section from the view which may happen when moving all rows from a table section.
+			removeTableSectionIfEmpty( 'thead', viewTable, conversionApi );
+		}
 
 		function isBetween( index, lower, upper ) {
 			return index > lower && index < upper;
@@ -296,7 +298,6 @@ export function downcastRemoveRow() {
 		const viewStart = mapper.toViewPosition( data.position ).getLastMatchingPosition( value => !value.item.is( 'tr' ) );
 		const viewItem = viewStart.nodeAfter;
 		const tableSection = viewItem.parent;
-		const viewTable = tableSection.parent;
 
 		// Remove associated <tr> from the view.
 		const removeRange = viewWriter.createRangeOn( viewItem );
@@ -306,9 +307,11 @@ export function downcastRemoveRow() {
 			mapper.unbindViewElement( child );
 		}
 
-		// Cleanup: Ensure that thead & tbody sections are removed if left empty after removing rows. See #6437, #6391.
-		removeTableSectionIfEmpty( 'thead', viewTable, conversionApi );
-		removeTableSectionIfEmpty( 'tbody', viewTable, conversionApi );
+		// Check if table section has any children left - if not remove it from the view.
+		if ( !tableSection.childCount ) {
+			// No need to unbind anything as table section is not represented in the model.
+			viewWriter.remove( viewWriter.createRangeOn( tableSection ) );
+		}
 	}, { priority: 'higher' } );
 }
 

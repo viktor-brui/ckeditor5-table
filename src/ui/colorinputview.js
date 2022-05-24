@@ -101,19 +101,9 @@ export default class ColorInputView extends View {
 		 * An instance of the input allowing the user to type a color value.
 		 *
 		 * @protected
-		 * @member {module:ui/inputtext/inputtextview~InputTextView}
+		 * @member {module:ui/dropdown/dropdown~DropdownView}
 		 */
 		this._inputView = this._createInputTextView( locale );
-
-		/**
-		 * The flag that indicates whether the user is still typing.
-		 * If set to true, it means that the text input field ({@link #_inputView}) still has the focus.
-		 * So, we should interrupt the user by replacing the input's value.
-		 *
-		 * @protected
-		 * @member {Boolean}
-		 */
-		this._stillTyping = false;
 
 		this.setTemplate( {
 			tag: 'div',
@@ -130,10 +120,8 @@ export default class ColorInputView extends View {
 			children: [
 				this._inputView,
 				this._dropdownView
-			]
+			],
 		} );
-
-		this.on( 'change:value', ( evt, name, inputValue ) => this._setInputValue( inputValue ) );
 	}
 
 	/**
@@ -150,7 +138,6 @@ export default class ColorInputView extends View {
 	 */
 	_createDropdownView() {
 		const locale = this.locale;
-		const t = locale.t;
 		const bind = this.bindTemplate;
 		const colorGrid = this._createColorGrid( locale );
 		const dropdown = createDropdown( locale );
@@ -183,13 +170,12 @@ export default class ColorInputView extends View {
 		dropdown.buttonView.extendTemplate( {
 			attributes: {
 				class: 'ck-input-color__button'
-			}
+			},
 		} );
 
 		dropdown.buttonView.children.add( colorPreview );
-		dropdown.buttonView.tooltip = t( 'Color picker' );
 
-		dropdown.panelPosition = locale.uiLanguageDirection === 'rtl' ? 'se' : 'sw';
+		dropdown.panelPosition = 'sw';
 		dropdown.panelView.children.add( removeColorButton );
 		dropdown.panelView.children.add( colorGrid );
 		dropdown.bind( 'isEnabled' ).to( this, 'isReadOnly', value => !value );
@@ -198,42 +184,25 @@ export default class ColorInputView extends View {
 	}
 
 	/**
-	 * Creates and configures an instance of {@link module:ui/inputtext/inputtextview~InputTextView}.
+	 * Creates and configures the {@link #_inputView}.
 	 *
 	 * @private
-	 * @returns {module:ui/inputtext/inputtextview~InputTextView} A configured instance to be set as {@link #_inputView}.
 	 */
 	_createInputTextView() {
 		const locale = this.locale;
-		const inputView = new InputTextView( locale );
+		const input = new InputTextView( locale );
 
-		inputView.extendTemplate( {
-			on: {
-				blur: inputView.bindTemplate.to( 'blur' )
-			}
+		input.bind( 'value' ).to( this );
+		input.bind( 'isReadOnly' ).to( this );
+		input.bind( 'hasError' ).to( this );
+
+		input.on( 'input', () => {
+			this.value = input.element.value;
 		} );
 
-		inputView.value = this.value;
-		inputView.bind( 'isReadOnly' ).to( this );
-		inputView.bind( 'hasError' ).to( this );
+		input.delegate( 'input' ).to( this );
 
-		inputView.on( 'input', () => {
-			const inputValue = inputView.element.value;
-			// Check if the value matches one of our defined colors' label.
-			const mappedColor = this.options.colorDefinitions.find( def => inputValue === def.label );
-
-			this._stillTyping = true;
-			this.value = mappedColor && mappedColor.color || inputValue;
-		} );
-
-		inputView.on( 'blur', () => {
-			this._stillTyping = false;
-			this._setInputValue( inputView.element.value );
-		} );
-
-		inputView.delegate( 'input' ).to( this );
-
-		return inputView;
+		return input;
 	}
 
 	/**
@@ -275,51 +244,9 @@ export default class ColorInputView extends View {
 			this._dropdownView.isOpen = false;
 			this.fire( 'input' );
 		} );
+
 		colorGrid.bind( 'selectedColor' ).to( this, 'value' );
 
 		return colorGrid;
 	}
-
-	/**
-	 * Sets {@link #_inputView}'s value property to the color value or color label,
-	 * if there is one and the user is not typing.
-	 *
-	 * Handles cases like:
-	 *
-	 * * Someone picks the color in the grid.
-	 * * The color is set from the plugin level.
-	 *
-	 * @private
-	 * @param {String} inputValue Color value to be set.
-	 */
-	_setInputValue( inputValue ) {
-		if ( !this._stillTyping ) {
-			const normalizedInputValue = normalizeColor( inputValue );
-			// Check if the value matches one of our defined colors.
-			const mappedColor = this.options.colorDefinitions.find( def => normalizedInputValue === normalizeColor( def.color ) );
-
-			if ( mappedColor ) {
-				this._inputView.value = mappedColor.label;
-			} else {
-				this._inputView.value = inputValue || '';
-			}
-		}
-	}
-}
-
-// Normalizes color value, by stripping extensive whitespace.
-// For example., transforms:
-// * `   rgb(  25 50    0 )` to `rgb(25 50 0)`,
-// * "\t  rgb(  25 ,  50,0 )		" to `rgb(25 50 0)`.
-//
-// @param {String} colorString The value to be normalized.
-// @returns {String}
-function normalizeColor( colorString ) {
-	return colorString
-		// Remove any whitespace right after `(` or `,`.
-		.replace( /([(,])\s+/g, '$1' )
-		// Remove any whitespace at the beginning or right before the end, `)`, `,`, or another whitespace.
-		.replace( /^\s+|\s+(?=[),\s]|$)/g, '' )
-		// Then, replace `,` or whitespace with a single space.
-		.replace( /,|\s/g, ' ' );
 }

@@ -4,12 +4,10 @@
  */
 
 import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import HorizontalLineEditing from '@ckeditor/ckeditor5-horizontal-line/src/horizontallineediting';
 import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
 
 import InsertColumnCommand from '../../src/commands/insertcolumncommand';
-import TableSelection from '../../src/tableselection';
-import { assertSelectedCells, defaultConversion, defaultSchema, modelTable } from '../_utils/utils';
+import { defaultConversion, defaultSchema, modelTable } from '../_utils/utils';
 import TableUtils from '../../src/tableutils';
 import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 
@@ -19,7 +17,7 @@ describe( 'InsertColumnCommand', () => {
 	beforeEach( () => {
 		return ModelTestEditor
 			.create( {
-				plugins: [ TableUtils, TableSelection, HorizontalLineEditing ]
+				plugins: [ TableUtils ]
 			} )
 			.then( newEditor => {
 				editor = newEditor;
@@ -78,7 +76,7 @@ describe( 'InsertColumnCommand', () => {
 				] ) );
 			} );
 
-			it( 'should insert column at table end', () => {
+			it( 'should insert columns at table end', () => {
 				setData( model, modelTable( [
 					[ '11', '12' ],
 					[ '21', '22[]' ]
@@ -90,33 +88,6 @@ describe( 'InsertColumnCommand', () => {
 					[ '11', '12', '' ],
 					[ '21', '22[]', '' ]
 				] ) );
-			} );
-
-			it( 'should insert column after a multi column selection', () => {
-				setData( model, modelTable( [
-					[ '11', '12', '13' ],
-					[ '21', '22', '23' ]
-				] ) );
-
-				const tableSelection = editor.plugins.get( TableSelection );
-				const modelRoot = model.document.getRoot();
-
-				tableSelection.setCellSelection(
-					modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
-					modelRoot.getNodeByPath( [ 0, 1, 1 ] )
-				);
-
-				command.execute();
-
-				assertEqualMarkup( getData( model, { withoutSelection: true } ), modelTable( [
-					[ '11', '12', '', '13' ],
-					[ '21', '22', '', '23' ]
-				] ) );
-
-				assertSelectedCells( model, [
-					[ 1, 1, 0, 0 ],
-					[ 1, 1, 0, 0 ]
-				] );
 			} );
 
 			it( 'should update table heading columns attribute when inserting column in headings section', () => {
@@ -182,22 +153,6 @@ describe( 'InsertColumnCommand', () => {
 					[ { colspan: 5, contents: '31' }, { colspan: 2, contents: '34' } ]
 				], { headingColumns: 5 } ) );
 			} );
-
-			it( 'should insert a column when a widget in the table cell is selected', () => {
-				setData( model, modelTable( [
-					[ '11', '12' ],
-					[ '21', '22' ],
-					[ '31', '[<horizontalLine></horizontalLine>]' ]
-				] ) );
-
-				command.execute();
-
-				assertEqualMarkup( getData( model, { withoutSelection: true } ), modelTable( [
-					[ '11', '12', '' ],
-					[ '21', '22', '' ],
-					[ '31', '<horizontalLine></horizontalLine>', '' ]
-				] ) );
-			} );
 		} );
 	} );
 
@@ -257,33 +212,6 @@ describe( 'InsertColumnCommand', () => {
 					[ '', '11', '12' ],
 					[ '', '[]21', '22' ]
 				] ) );
-			} );
-
-			it( 'should insert column before a multi column selection', () => {
-				setData( model, modelTable( [
-					[ '11', '12', '13' ],
-					[ '21', '22', '23' ]
-				] ) );
-
-				const tableSelection = editor.plugins.get( TableSelection );
-				const modelRoot = model.document.getRoot();
-
-				tableSelection.setCellSelection(
-					modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
-					modelRoot.getNodeByPath( [ 0, 1, 1 ] )
-				);
-
-				command.execute();
-
-				assertEqualMarkup( getData( model, { withoutSelection: true } ), modelTable( [
-					[ '', '11', '12', '13' ],
-					[ '', '21', '22', '23' ]
-				] ) );
-
-				assertSelectedCells( model, [
-					[ 0, 1, 1, 0 ],
-					[ 0, 1, 1, 0 ]
-				] );
 			} );
 
 			it( 'should update table heading columns attribute when inserting column in headings section', () => {

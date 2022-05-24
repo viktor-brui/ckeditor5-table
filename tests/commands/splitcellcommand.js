@@ -8,7 +8,6 @@ import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model
 
 import SplitCellCommand from '../../src/commands/splitcellcommand';
 import { defaultConversion, defaultSchema, modelTable } from '../_utils/utils';
-import TableSelection from '../../src/tableselection';
 import TableUtils from '../../src/tableutils';
 import { assertEqualMarkup } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
 
@@ -18,7 +17,7 @@ describe( 'SplitCellCommand', () => {
 	beforeEach( () => {
 		return ModelTestEditor
 			.create( {
-				plugins: [ TableUtils, TableSelection ]
+				plugins: [ TableUtils ]
 			} )
 			.then( newEditor => {
 				editor = newEditor;
@@ -46,36 +45,6 @@ describe( 'SplitCellCommand', () => {
 				] ) );
 
 				expect( command.isEnabled ).to.be.true;
-			} );
-
-			it( 'should be true if in an entire cell is selected', () => {
-				setData( model, modelTable( [
-					[ '00', '01' ]
-				] ) );
-
-				const tableSelection = editor.plugins.get( TableSelection );
-				const modelRoot = model.document.getRoot();
-				tableSelection.setCellSelection(
-					modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
-					modelRoot.getNodeByPath( [ 0, 0, 0 ] )
-				);
-
-				expect( command.isEnabled ).to.be.true;
-			} );
-
-			it( 'should be false if multiple cells are selected', () => {
-				setData( model, modelTable( [
-					[ '00', '01' ]
-				] ) );
-
-				const tableSelection = editor.plugins.get( TableSelection );
-				const modelRoot = model.document.getRoot();
-				tableSelection.setCellSelection(
-					modelRoot.getNodeByPath( [ 0, 0, 0 ] ),
-					modelRoot.getNodeByPath( [ 0, 0, 1 ] )
-				);
-
-				expect( command.isEnabled ).to.be.false;
 			} );
 
 			it( 'should be false if not in cell', () => {

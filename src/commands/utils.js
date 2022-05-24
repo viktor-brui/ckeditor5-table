@@ -10,15 +10,14 @@
 import { isObject } from 'lodash-es';
 
 /**
- * Returns the parent element of the given name. Returns undefined if the position or the element is not inside the desired parent.
+ * Returns the parent element of the given name. Returns undefined if the position is not inside the desired parent.
  *
  * @param {String} parentName The name of the parent element to find.
- * @param {module:engine/model/position~Position|module:engine/model/position~Position} positionOrElement The position or
- * the parentElement to start searching.
+ * @param {module:engine/model/position~Position|module:engine/model/position~Position} position The position to start searching.
  * @returns {module:engine/model/element~Element|module:engine/model/documentfragment~DocumentFragment}
  */
-export function findAncestor( parentName, positionOrElement ) {
-	let parent = positionOrElement.parent;
+export function findAncestor( parentName, position ) {
+	let parent = position.parent;
 
 	while ( parent ) {
 		if ( parent.name === parentName ) {
@@ -113,19 +112,4 @@ export function addDefaultUnitToNumericValue( value, defaultUnit ) {
 	}
 
 	return `${ numericValue }${ defaultUnit }`;
-}
-
-/**
- * Checks if a table cell belongs to the heading column section.
- *
- * @param {module:table/tableutils~TableUtils} tableUtils
- * @param {module:engine/model/element~Element} tableCell
- * @returns {Boolean}
- */
-export function isHeadingColumnCell( tableUtils, tableCell ) {
-	const table = tableCell.parent.parent;
-	const headingColumns = parseInt( table.getAttribute( 'headingColumns' ) || 0 );
-	const { column } = tableUtils.getCellLocation( tableCell );
-
-	return !!headingColumns && column < headingColumns;
 }

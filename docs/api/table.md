@@ -18,10 +18,6 @@ See the {@link features/table Table feature} guide and the documentation for the
 
 * {@link module:table/table~Table}
 * {@link module:table/tabletoolbar~TableToolbar}
-* {@link module:table/tableproperties~TableProperties}
-* {@link module:table/tablecellproperties~TableCellProperties}
-* {@link module:table/tableselection~TableSelection}
-* {@link module:table/tableclipboard~TableClipboard}
 * {@link module:table/tableutils~TableUtils}
 
 ## Installation
@@ -32,11 +28,11 @@ npm install --save @ckeditor/ckeditor5-table
 
 ## Contribute
 
-The source code of this package is available on GitHub in https://github.com/ckeditor/ckeditor5/tree/master/packages/ckeditor5-table.
+The source code of this package is available on GitHub in https://github.com/ckeditor/ckeditor5-table.
 
 ## External links
 
 * [`@ckeditor/ckeditor5-table` on npm](https://www.npmjs.com/package/@ckeditor/ckeditor5-table)
-* [`ckeditor/ckeditor5-table` on GitHub](https://github.com/ckeditor/ckeditor5/tree/master/packages/ckeditor5-table)
+* [`ckeditor/ckeditor5-table` on GitHub](https://github.com/ckeditor/ckeditor5-table)
 * [Issue tracker](https://github.com/ckeditor/ckeditor5/issues)
-* [Changelog](https://github.com/ckeditor/ckeditor5/blob/master/CHANGELOG.md)
+* [Changelog](https://github.com/ckeditor/ckeditor5-table/blob/master/CHANGELOG.md)

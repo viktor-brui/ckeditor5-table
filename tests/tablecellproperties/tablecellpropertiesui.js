@@ -8,7 +8,7 @@
 import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor';
 import testUtils from '@ckeditor/ckeditor5-core/tests/_utils/utils';
 import { keyCodes } from '@ckeditor/ckeditor5-utils/src/keyboard';
-import { getData as getModelData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import { getData as getModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
 
 import Undo from '@ckeditor/ckeditor5-undo/src/undo';
 import Batch from '@ckeditor/ckeditor5-engine/src/model/batch';
@@ -21,7 +21,6 @@ import TableCellPropertiesEditing from '../../src/tablecellproperties/tablecellp
 import TableCellPropertiesUI from '../../src/tablecellproperties/tablecellpropertiesui';
 import TableCellPropertiesUIView from '../../src/tablecellproperties/ui/tablecellpropertiesview';
 import { defaultColors } from '../../src/ui/utils';
-import { modelTable } from '../_utils/utils';
 
 describe( 'table cell properties', () => {
 	describe( 'TableCellPropertiesUI', () => {
@@ -120,28 +119,6 @@ describe( 'table cell properties', () => {
 
 					tableCellPropertiesButton.fire( 'execute' );
 					sinon.assert.calledOnce( spy );
-				} );
-
-				it( 'should be disabled if all of the table cell properties commands are disabled', () => {
-					[
-						'tableCellBorderStyle',
-						'tableCellBorderColor',
-						'tableCellBorderWidth',
-						'tableCellWidth',
-						'tableCellHeight',
-						'tableCellPadding',
-						'tableCellBackgroundColor',
-						'tableCellHorizontalAlignment',
-						'tableCellVerticalAlignment'
-					].forEach( command => {
-						editor.commands.get( command ).isEnabled = false;
-					} );
-
-					expect( tableCellPropertiesButton.isEnabled ).to.be.false;
-
-					editor.commands.get( 'tableCellBackgroundColor' ).isEnabled = true;
-
-					expect( tableCellPropertiesButton.isEnabled ).to.be.true;
 				} );
 			} );
 		} );
@@ -550,19 +527,6 @@ describe( 'table cell properties', () => {
 				const secondBatch = tableCellPropertiesUI._undoStepBatch;
 				expect( secondBatch ).to.be.instanceOf( Batch );
 				expect( firstBatch ).to.not.equal( secondBatch );
-			} );
-
-			it( 'should show the ui for multi-cell selection', () => {
-				setData( editor.model, modelTable( [ [ '01', '02' ] ] ) );
-				editor.model.change( writer => {
-					writer.setSelection( [
-						writer.createRangeOn( editor.model.document.getRoot().getNodeByPath( [ 0, 0, 0 ] ) ),
-						writer.createRangeOn( editor.model.document.getRoot().getNodeByPath( [ 0, 0, 1 ] ) )
-					], 0 );
-				} );
-
-				tableCellPropertiesButton.fire( 'execute' );
-				expect( contextualBalloon.visibleView ).to.equal( tableCellPropertiesView );
 			} );
 
 			describe( 'initial data', () => {

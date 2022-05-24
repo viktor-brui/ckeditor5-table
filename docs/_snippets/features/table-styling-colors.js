@@ -5,6 +5,8 @@
 
 /* globals ClassicEditor, CKEditorPlugins, console, window, document */
 
+import { CS_CONFIG } from '@ckeditor/ckeditor5-cloud-services/tests/_utils/cloud-services-config';
+
 const customColorPalette = [
 	{
 		color: 'hsl(4, 90%, 58%)',
@@ -85,15 +87,22 @@ const customColorPalette = [
 	{
 		color: 'hsl(200, 18%, 100%)',
 		label: 'White'
-	}
+	},
 ];
 
 ClassicEditor
 	.create( document.querySelector( '#snippet-table-styling-colors' ), {
 		extraPlugins: [
 			CKEditorPlugins.TableProperties,
-			CKEditorPlugins.TableCellProperties
+			CKEditorPlugins.TableCellProperties,
 		],
+		cloudServices: CS_CONFIG,
+		toolbar: {
+			items: [
+				'insertTable', '|', 'heading', '|', 'bold', 'italic', '|', 'undo', 'redo'
+			],
+			viewportTopOffset: window.getViewportTopOffsetConfig()
+		},
 		table: {
 			contentToolbar: [ 'tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties' ],
 			tableProperties: {

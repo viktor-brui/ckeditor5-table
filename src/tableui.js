@@ -9,7 +9,6 @@
 
 import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
 import { addListToDropdown, createDropdown } from '@ckeditor/ckeditor5-ui/src/dropdown/utils';
-import SplitButtonView from '@ckeditor/ckeditor5-ui/src/dropdown/button/splitbuttonview';
 import Model from '@ckeditor/ckeditor5-ui/src/model';
 import Collection from '@ckeditor/ckeditor5-utils/src/collection';
 
@@ -26,7 +25,7 @@ import tableMergeCellIcon from './../theme/icons/table-merge-cell.svg';
  * * The `'insertTable'` dropdown,
  * * The `'tableColumn'` dropdown,
  * * The `'tableRow'` dropdown,
- * * The `'mergeTableCells'` split button.
+ * * The `'mergeTableCells'` dropdown.
  *
  * The `'tableColumn'`, `'tableRow'` and `'mergeTableCells'` dropdowns work best with {@link module:table/tabletoolbar~TableToolbar}.
  *
@@ -114,13 +113,6 @@ export default class TableUI extends Plugin {
 						commandName: 'removeTableColumn',
 						label: t( 'Delete column' )
 					}
-				},
-				{
-					type: 'button',
-					model: {
-						commandName: 'selectTableColumn',
-						label: t( 'Select column' )
-					}
 				}
 			];
 
@@ -141,13 +133,6 @@ export default class TableUI extends Plugin {
 				{
 					type: 'button',
 					model: {
-						commandName: 'insertTableRowAbove',
-						label: t( 'Insert row above' )
-					}
-				},
-				{
-					type: 'button',
-					model: {
 						commandName: 'insertTableRowBelow',
 						label: t( 'Insert row below' )
 					}
@@ -155,15 +140,15 @@ export default class TableUI extends Plugin {
 				{
 					type: 'button',
 					model: {
-						commandName: 'removeTableRow',
-						label: t( 'Delete row' )
+						commandName: 'insertTableRowAbove',
+						label: t( 'Insert row above' )
 					}
 				},
 				{
 					type: 'button',
 					model: {
-						commandName: 'selectTableRow',
-						label: t( 'Select row' )
+						commandName: 'removeTableRow',
+						label: t( 'Delete row' )
 					}
 				}
 			];
@@ -218,7 +203,7 @@ export default class TableUI extends Plugin {
 				}
 			];
 
-			return this._prepareMergeSplitButtonDropdown( t( 'Merge cells' ), tableMergeCellIcon, options, locale );
+			return this._prepareDropdown( t( 'Merge cells' ), tableMergeCellIcon, options, locale );
 		} );
 	}
 
@@ -234,8 +219,18 @@ export default class TableUI extends Plugin {
 	 */
 	_prepareDropdown( label, icon, options, locale ) {
 		const editor = this.editor;
+
 		const dropdownView = createDropdown( locale );
-		const commands = this._fillDropdownWithListOptions( dropdownView, options );
+		const commands = [];
+
+		// Prepare dropdown list items for list dropdown.
+		const itemDefinitions = new Collection();
+
+		for ( const option of options ) {
+			addListOption( option, editor, commands, itemDefinitions );
+		}
+
+		addListToDropdown( dropdownView, itemDefinitions, editor.ui.componentFactory );
 
 		// Decorate dropdown's button.
 		dropdownView.buttonView.set( {
@@ -255,69 +250,6 @@ export default class TableUI extends Plugin {
 		} );
 
 		return dropdownView;
-	}
-
-	/**
-	 * Creates a dropdown view with a {@link module:ui/dropdown/button/splitbuttonview~SplitButtonView} for
-	 * merge (and split)–related commands.
-	 *
-	 * @private
-	 * @param {String} label The dropdown button label.
-	 * @param {String} icon An icon for the dropdown button.
-	 * @param {Array.<module:ui/dropdown/utils~ListDropdownItemDefinition>} options The list of options for the dropdown.
-	 * @param {module:utils/locale~Locale} locale
-	 * @returns {module:ui/dropdown/dropdownview~DropdownView}
-	 */
-	_prepareMergeSplitButtonDropdown( label, icon, options, locale ) {
-		const editor = this.editor;
-		const dropdownView = createDropdown( locale, SplitButtonView );
-		const mergeCommandName = 'mergeTableCells';
-
-		this._fillDropdownWithListOptions( dropdownView, options );
-
-		dropdownView.buttonView.set( {
-			label,
-			icon,
-			tooltip: true,
-			isEnabled: true
-		} );
-
-		// Merge selected table cells when the main part of the split button is clicked.
-		this.listenTo( dropdownView.buttonView, 'execute', () => {
-			editor.execute( mergeCommandName );
-			editor.editing.view.focus();
-		} );
-
-		// Execute commands for events coming from the list in the dropdown panel.
-		this.listenTo( dropdownView, 'execute', evt => {
-			editor.execute( evt.source.commandName );
-			editor.editing.view.focus();
-		} );
-
-		return dropdownView;
-	}
-
-	/**
-	 * Injects a {@link module:ui/list/listview~ListView} into the passed dropdown with buttons
-	 * which execute editor commands as configured in passed options.
-	 *
-	 * @private
-	 * @param {module:ui/dropdown/dropdownview~DropdownView} dropdownView
-	 * @param {Array.<module:ui/dropdown/utils~ListDropdownItemDefinition>} options The list of options for the dropdown.
-	 * @returns {Array.<module:core/command~Command>} Commands the list options are interacting with.
-	 */
-	_fillDropdownWithListOptions( dropdownView, options ) {
-		const editor = this.editor;
-		const commands = [];
-		const itemDefinitions = new Collection();
-
-		for ( const option of options ) {
-			addListOption( option, editor, commands, itemDefinitions );
-		}
-
-		addListToDropdown( dropdownView, itemDefinitions, editor.ui.componentFactory );
-
-		return commands;
 	}
 }
 
