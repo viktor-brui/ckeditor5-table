@@ -314,7 +314,7 @@ export default class TableCellPropertiesView extends View {
 
 		// Form header.
 		this.children.add( new FormHeaderView( locale, {
-			label: this.t( 'Свойства ячейки' )
+			label: this.t( 'Cell properties' )
 		} ) );
 
 		// Border row.
@@ -460,14 +460,14 @@ export default class TableCellPropertiesView extends View {
 		// -- Group label ---------------------------------------------
 
 		const borderRowLabel = new LabelView( locale );
-		borderRowLabel.text = t( 'Граница' );
+		borderRowLabel.text = t( 'Border' );
 
 		// -- Style ---------------------------------------------------
 
 		const styleLabels = getBorderStyleLabels( t );
 		const borderStyleDropdown = new LabeledView( locale, createLabeledDropdown );
 		borderStyleDropdown.set( {
-			label: t( 'Стиль' ),
+			label: t( 'Style' ),
 			class: 'ck-table-form__border-style'
 		} );
 
@@ -492,7 +492,7 @@ export default class TableCellPropertiesView extends View {
 		const borderWidthInput = new LabeledView( locale, createLabeledInputText );
 
 		borderWidthInput.set( {
-			label: t( 'Ширина' ),
+			label: t( 'Width' ),
 			class: 'ck-table-form__border-width'
 		} );
 
@@ -507,7 +507,7 @@ export default class TableCellPropertiesView extends View {
 		const borderColorInput = new LabeledView( locale, colorInputCreator );
 
 		borderColorInput.set( {
-			label: t( 'Цвет' ),
+			label: t( 'Colour' ),
 			class: 'ck-table-form__border-color',
 		} );
 
@@ -554,7 +554,7 @@ export default class TableCellPropertiesView extends View {
 		const backgroundInput = new LabeledView( locale, colorInputCreator );
 
 		backgroundInput.set( {
-			label: t( 'Фон' ),
+			label: t( 'Background' ),
 			class: 'ck-table-cell-properties-form__background',
 		} );
 
@@ -582,14 +582,14 @@ export default class TableCellPropertiesView extends View {
 		// -- Label ---------------------------------------------------
 
 		const dimensionsLabel = new LabelView( locale );
-		dimensionsLabel.text = t( 'Размеры' );
+		dimensionsLabel.text = t( 'Sizes' );
 
 		// -- Width ---------------------------------------------------
 
 		const widthInput = new LabeledView( locale, createLabeledInputText );
 
 		widthInput.set( {
-			label: t( 'Ширина' ),
+			label: t( 'Width' ),
 			class: 'ck-table-form__dimensions-row__width',
 		} );
 
@@ -618,7 +618,7 @@ export default class TableCellPropertiesView extends View {
 		const heightInput = new LabeledView( locale, createLabeledInputText );
 
 		heightInput.set( {
-			label: t( 'Высота' ),
+			label: t( 'Height' ),
 			class: 'ck-table-form__dimensions-row__height',
 		} );
 
@@ -650,7 +650,7 @@ export default class TableCellPropertiesView extends View {
 		const paddingInput = new LabeledView( locale, createLabeledInputText );
 
 		paddingInput.set( {
-			label: t( 'Отступ' ),
+			label: t( 'Indent' ),
 			class: 'ck-table-cell-properties-form__padding',
 		} );
 
@@ -677,7 +677,7 @@ export default class TableCellPropertiesView extends View {
 
 		const alignmentLabel = new LabelView( locale );
 
-		alignmentLabel.text = t( 'Выравнивание текста ячейки таблицы' );
+		alignmentLabel.text = t( 'Alignment of the text of a table cell' );
 
 		// -- Horizontal ---------------------------------------------------
 
@@ -685,7 +685,7 @@ export default class TableCellPropertiesView extends View {
 
 		horizontalAlignmentToolbar.set( {
 			isCompact: true,
-			ariaLabel: t( 'Панель инструментов выравнивания текста по горизонтали' )
+			ariaLabel: t( 'Horizontal Text Alignment Toolbar' )
 		} );
 
 		fillToolbar( {
@@ -705,7 +705,7 @@ export default class TableCellPropertiesView extends View {
 
 		verticalAlignmentToolbar.set( {
 			isCompact: true,
-			ariaLabel: t( 'Панель инструментов выравнивания текста по вертикали' )
+			ariaLabel: t( 'Vertical Text Alignment Toolbar' )
 		} );
 
 		fillToolbar( {
@@ -784,10 +784,10 @@ export default class TableCellPropertiesView extends View {
 		const t = this.t;
 
 		return {
-			left: t( 'Выровнять текст ячейки по левому краю' ),
-			center: t( 'Выровнять текст ячейки по центру' ),
-			right: t( 'Выровнять текст ячейки по правому краю' ),
-			justify: t( 'Выравнивание текста ячейки' ),
+			left: t( 'Align the cell text to the left' ),
+			center: t( 'Align the cell text to the center' ),
+			right: t( 'Align the cell text to the right edge' ),
+			justify: t( 'Cell text alignment' ),
 		};
 	}
 
@@ -801,9 +801,9 @@ export default class TableCellPropertiesView extends View {
 		const t = this.t;
 
 		return {
-			top: t( 'Выровнять текст ячейки по верхнему краю' ),
-			middle: t( 'Выровнять текст ячейки по середине' ),
-			bottom: t( 'Выровнять текст ячейки по нижнему краю' )
+			top: t( 'Align the cell text to the top edge' ),
+			middle: t( 'Align the cell text to the middle' ),
+			bottom: t( 'Align the cell text to the bottom edge' )
 		};
 	}
 }

@@ -103,7 +103,7 @@ export default class TablePropertiesUI extends Plugin {
 			const view = new ButtonView( locale );
 
 			view.set( {
-				label: t( 'Свойства таблицы' ),
+				label: t( 'Table properties' ),
 				icon: tableProperties,
 				tooltip: true
 			} );

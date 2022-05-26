@@ -140,6 +140,94 @@ msgctxt "Label for the table border input."
 msgid "Style"
 msgstr "Стиль"
 
+msgctxt "Label for the table border input."
+msgid "Border"
+msgstr "Граница"
+
+msgctxt "Label for the table border input."
+msgid "Width"
+msgstr "Ширина"
+
+msgctxt "Label for the table border input."
+msgid "Height"
+msgstr "Высота"
+
+msgctxt "Label for the table border input."
+msgid "Colour"
+msgstr "Цвет"
+
+msgctxt "Label for the table border input."
+msgid "Background"
+msgstr "Фон"
+
+msgctxt "Label for the table border input."
+msgid "Sizes"
+msgstr "Размеры"
+
+msgctxt "Label for the table border input."
+msgid "Indent"
+msgstr "Отступ"
+
+msgctxt "Label for the table border input."
+msgid "Alignment"
+msgstr "Выравнивание"
+
+msgctxt "Label for the table border input."
+msgid "Table Alignment Toolbar"
+msgstr "Панель инструментов выравнивания таблицы"
+
+msgctxt "Label for the table border input."
+msgid "Align the table to the left"
+msgstr "Выровнять таблицу по левому краю"
+
+msgctxt "Label for the table border input."
+msgid "Align the table to the center"
+msgstr "Выровнять таблицу по центру"
+
+msgctxt "Label for the table border input."
+msgid "Align the table to the right"
+msgstr "Выровнять таблицу по правому краю"
+
+msgctxt "Label for the table border input."
+msgid "Alignment of the text of a table cell"
+msgstr "Выравнивание текста ячейки таблицы"
+
+msgctxt "Label for the table border input."
+msgid "Horizontal Text Alignment Toolbar"
+msgstr "Панель инструментов выравнивания текста по горизонтали"
+
+msgctxt "Label for the table border input."
+msgid "Vertical Text Alignment Toolbar"
+msgstr "Панель инструментов выравнивания текста по вертикали"
+
+msgctxt "Label for the table border input."
+msgid "Align the cell text to the left"
+msgstr "Выровнять текст ячейки по левому краю"
+
+msgctxt "Label for the table border input."
+msgid "Align the cell text to the center"
+msgstr "Выровнять текст ячейки по центру"
+
+msgctxt "Label for the table border input."
+msgid "Align the cell text to the right edge"
+msgstr "Выровнять текст ячейки по правому краю"
+
+msgctxt "Label for the table border input."
+msgid "Cell text alignment"
+msgstr "Выравнивание текста ячейки"
+
+msgctxt "Label for the table border input."
+msgid "Align the cell text to the top edge"
+msgstr "Выровнять текст ячейки по верхнему краю"
+
+msgctxt "Label for the table border input."
+msgid "Align the cell text to the middle"
+msgstr "Выровнять текст ячейки по середине"
+
+msgctxt "Label for the table border input."
+msgid "Align the cell text to the bottom edge"
+msgstr "Выровнять текст ячейки по нижнему краю"
+
 msgctxt "The label used by assistive technologies describing a table toolbar attached to a table widget."
 msgid "Table toolbar"
 msgstr ""
