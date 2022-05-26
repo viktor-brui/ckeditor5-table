@@ -314,7 +314,7 @@ export default class TableCellPropertiesView extends View {
 
 		// Form header.
 		this.children.add( new FormHeaderView( locale, {
-			label: this.t( 'Cell properties' )
+			label: this.t( 'Свойства ячейки' )
 		} ) );
 
 		// Border row.
